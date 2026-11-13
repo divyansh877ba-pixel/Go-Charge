@@ -1,0 +1,449 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #F4F1E8;
+  color: #14201F;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: #081917;
+  color: #E4EFEA;
+}
+
+/* Custom Scrollbar in Sand + Teal */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #EAE5D7;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0B211F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4CEC0;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #18423E;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #19C7B1;
+}
+
+/* Glassmorphism utilities for Sand + Teal & Dark Midnight */
+.glass-panel {
+  background: rgba(233, 239, 231, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #D9DED5;
+}
+
+.dark .glass-panel {
+  background: rgba(13, 36, 34, 0.88);
+  border-color: #1E4844;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #D9DED5;
+}
+
+.dark .glass-card {
+  background: rgba(17, 45, 43, 0.90);
+  border-color: #1E4844;
+}
+
+.glass-pill {
+  background: rgba(244, 241, 232, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #D9DED5;
+}
+
+.dark .glass-pill {
+  background: rgba(13, 36, 34, 0.92);
+  border-color: #1E4844;
+}
+
+.glass-input {
+  background: #FFFFFF;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #D9DED5;
+  color: #14201F;
+}
+
+.dark .glass-input {
+  background: #0F2826;
+  border-color: #1E4844;
+  color: #E4EFEA;
+}
+
+.glass-input:focus {
+  background: #FFFFFF;
+  border-color: #19C7B1;
+  outline: none;
+}
+
+.dark .glass-input:focus {
+  background: #123230;
+  border-color: #18C5B7;
+}
+
+/* Leaflet Sand & Teal styling */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #EAE5D7 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.leaflet-control-zoom {
+  display: none !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(244, 241, 232, 0.9) !important;
+  color: #5E716E !important;
+  font-size: 10px !important;
+  border-radius: 6px !important;
+  margin: 6px !important;
+  padding: 2px 6px !important;
+  border: 1px solid #D9DED5 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #123C3A !important;
+  font-weight: 500;
+  text-decoration: none !important;
+}
+
+/* Marker Styling & Pulse animations */
+@keyframes greenPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes tealPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(25, 199, 177, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(25, 199, 177, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 199, 177, 0);
+  }
+}
+
+.pin-pulse-green {
+  animation: greenPulse 2.2s infinite;
+}
+
+.pin-pulse-teal {
+  animation: tealPulse 2.2s infinite;
+}
+
+.pin-active-ring {
+  box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 6px #19C7B1, 0 8px 24px rgba(25, 199, 177, 0.45) !important;
+}
+
+/* Custom MapLibre / OpenFreeMap Popup Overrides */
+.maplibregl-popup {
+  z-index: 1000 !important;
+}
+
+.maplibregl-popup-content {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #FFFFFF !important;
+  border-bottom-color: #FFFFFF !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #5E716E !important;
+  padding: 6px 10px !important;
+  font-size: 16px !important;
+  top: 6px !important;
+  right: 6px !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #123C3A !important;
+  background: transparent !important;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(244, 241, 232, 0.94) !important;
+  color: #5E716E !important;
+  font-size: 10px !important;
+  border-radius: 8px !important;
+  margin: 6px !important;
+  padding: 2px 8px !important;
+  border: 1px solid #D9DED5 !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #123C3A !important;
+  font-weight: 600;
+  text-decoration: none !important;
+}
+
+.maplibregl-ctrl-attrib a:hover {
+  color: #19C7B1 !important;
+}
+
+/* Dark mode map styling */
+.dark .maplibregl-canvas {
+  filter: brightness(0.82) contrast(1.18) hue-rotate(180deg) invert(100%);
+  transition: filter 0.3s ease;
+}
+
+.dark .maplibregl-popup-tip {
+  border-top-color: #0D2422 !important;
+  border-bottom-color: #0D2422 !important;
+}
+
+.dark .maplibregl-popup-close-button {
+  color: #8FAFA9 !important;
+}
+
+.dark .maplibregl-popup-close-button:hover {
+  color: #FFFFFF !important;
+}
+
+.dark .maplibregl-ctrl-attrib {
+  background: rgba(13, 36, 34, 0.94) !important;
+  color: #88ABA6 !important;
+  border-color: #183E3A !important;
+}
+
+.dark .maplibregl-ctrl-attrib a {
+  color: #19C7B1 !important;
+}
+
+/* Custom Leaflet Popup Overrides */
+.leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  border: 1px solid #D9DED5 !important;
+  border-radius: 14px !important;
+  padding: 0 !important;
+  color: #14201F !important;
+  box-shadow: 0 14px 38px rgba(18, 60, 58, 0.14) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: normal !important;
+}
+
+.leaflet-popup-tip {
+  background: #FFFFFF !important;
+  border: 1px solid #D9DED5 !important;
+}
+
+.leaflet-popup-close-button {
+  color: #5E716E !important;
+  padding: 6px 8px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #123C3A !important;
+}
+
+/* Hero Text Light Sweep Effect (one-time smooth shimmer on load) */
+@keyframes textLightSweep {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+.text-light-sweep {
+  background: linear-gradient(
+    90deg,
+    #19C7B1 0%,
+    #19C7B1 35%,
+    #E2F7F4 50%,
+    #19C7B1 65%,
+    #19C7B1 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textLightSweep 2.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+}
+
+/* Breathing Ambient Glow behind Hero */
+@keyframes ambientBreathe {
+  0%, 100% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.24;
+    transform: translate(-50%, -52%) scale(1.08);
+  }
+}
+
+.ambient-glow-breathe {
+  animation: ambientBreathe 7s ease-in-out infinite;
+}
+
+/* Cable energy flow traveling animation (pedestal to car port) */
+@keyframes cableEnergyFlow {
+  0% {
+    stroke-dashoffset: 200;
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.3;
+  }
+}
+
+/* Energy flow pulse line (How it works section) */
+@keyframes energyLineFlow {
+  0% {
+    left: 0%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+.energy-pulse-traveler {
+  position: absolute;
+  top: -3px;
+  width: 50px;
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, #19C7B1, #FFFFFF, transparent);
+  box-shadow: 0 0 12px #19C7B1;
+  animation: energyLineFlow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* 16. Tabular Numbers: Ensure numbers align in comparisons, metrics, timers & distances */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 17. Balanced Headlines & Pretty Body Text */
+h1, h2, h3, h4, .text-balance {
+  text-wrap: balance;
+}
+
+p, .text-pretty {
+  text-wrap: pretty;
+}
+
+/* 14. Mobile Safe-Area Inset Utilities */
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pl-safe {
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+}
+
+.pr-safe {
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+}
+
+/* 18. Continuous Corners (Squircle) as progressive enhancement */
+@supports (corner-shape: squircle) {
+  .rounded-card, [class*="rounded-card"] {
+    corner-shape: squircle;
+  }
+  .rounded-btn, [class*="rounded-btn"] {
+    corner-shape: squircle;
+  }
+  .rounded-pill, [class*="rounded-pill"] {
+    corner-shape: squircle;
+  }
+}
+
+/* 9. View Transitions API Support (sub-300ms transitions) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 11. Respect Reduced-Motion Preferences Across All Components */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pin-pulse-green,
+  .pin-pulse-teal,
+  .ambient-glow-breathe,
+  .energy-pulse-traveler,
+  .text-light-sweep {
+    animation: none !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
