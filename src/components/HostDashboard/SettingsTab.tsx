@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { 
   Settings, Shield, Zap, Bell, CheckCircle2, 
-  Save, Key, Smartphone, Clock, AlertTriangle,
-  Sun, Moon, Palette
+  Save, Key, Smartphone, Clock, AlertTriangle
 } from 'lucide-react';
-import { useTheme } from '../../hooks/useTheme';
 
 export const SettingsTab: React.FC = () => {
-  const { theme, setTheme, isDark, toggleTheme } = useTheme();
   const [autoAccept, setAutoAccept] = useState(true);
   const [gracePeriod, setGracePeriod] = useState(15);
   const [idleFee, setIdleFee] = useState(5);
@@ -30,7 +27,7 @@ export const SettingsTab: React.FC = () => {
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Host SaaS Settings</h2>
           <p className="text-xs sm:text-sm text-gray-500 dark:text-[#7A9E99] mt-0.5">
-            Operational rules, appearance theme, OCPP hardware telemetry and alert preferences
+            Operational rules, OCPP hardware telemetry and alert preferences
           </p>
         </div>
 
@@ -50,62 +47,6 @@ export const SettingsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Appearance & Theme Section */}
-      <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] space-y-4 transition-colors">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#18C5B7]/15 dark:bg-[#18C5B7]/25 text-[#18C5B7] flex items-center justify-center">
-            <Palette className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-bold text-base text-gray-900 dark:text-white">Interface Appearance</h3>
-            <p className="text-xs text-gray-400 dark:text-[#7A9E99]">Customize the dashboard color theme</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          {/* Light Theme Card */}
-          <div
-            onClick={() => setTheme('light')}
-            className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-3.5 ${
-              theme === 'light'
-                ? 'border-[#18C5B7] bg-[#18C5B7]/5 shadow-sm'
-                : 'border-gray-200 dark:border-[#163B37] hover:border-gray-300 dark:hover:border-[#1F4E49]'
-            }`}
-          >
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-              <Sun className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                <span>Light Theme</span>
-                {theme === 'light' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#18C5B7] text-[#073B35]">Active</span>}
-              </h4>
-              <p className="text-[11px] text-gray-500 dark:text-[#7A9E99] mt-0.5">Classic cream background (#F8F7F2) with teal accents</p>
-            </div>
-          </div>
-
-          {/* Dark Theme Card */}
-          <div
-            onClick={() => setTheme('dark')}
-            className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-3.5 ${
-              theme === 'dark'
-                ? 'border-[#18C5B7] bg-[#18C5B7]/10 shadow-sm'
-                : 'border-gray-200 dark:border-[#163B37] hover:border-gray-300 dark:hover:border-[#1F4E49]'
-            }`}
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#073B35] text-[#18C5B7] flex items-center justify-center flex-shrink-0 border border-[#18C5B7]/30">
-              <Moon className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                <span>Dark Theme</span>
-                {theme === 'dark' && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#18C5B7] text-[#073B35]">Active</span>}
-              </h4>
-              <p className="text-[11px] text-gray-500 dark:text-[#7A9E99] mt-0.5">Deep midnight teal (#081917) optimized for low-light environments</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Operational Rules */}
       <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] space-y-4 transition-colors">

@@ -74,6 +74,8 @@ export interface Station {
   state?: string;
   pincode?: string;
   photos?: string[];
+  isMock?: boolean;
+  source?: 'database' | 'mock';
 }
 
 export type FilterCategory = 

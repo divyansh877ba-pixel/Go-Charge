@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Station } from '../../types';
 import { Zap, Plug, Navigation, ArrowRight, IndianRupee, Star, Heart } from 'lucide-react';
 import { calculateDistance, USER_CURRENT_LOCATION } from '../../data/mockStations';
@@ -56,12 +57,22 @@ export const StationCard: React.FC<StationCardProps> = ({
   };
 
   return (
-    <div
+    <motion.div
       onClick={onSelect}
-      className={`group relative p-4 rounded-card border transition-all duration-300 cursor-pointer shadow-card-subtle ${
+      layout
+      whileHover={{
+        y: -4,
+        scale: 1.012,
+        boxShadow: isSelected
+          ? '0 20px 48px rgba(25,199,177,0.28)'
+          : '0 16px 40px rgba(18,60,58,0.14)',
+      }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+      className={`group relative p-4 rounded-card border cursor-pointer shadow-card-subtle ${
         isSelected
-          ? 'bg-white dark:bg-[#0D2422] border-[#19C7B1] border-l-4 border-l-[#19C7B1] shadow-card-hover'
-          : 'bg-[#E9EFE7] dark:bg-[#091F1D] border-[#D9DED5] dark:border-[#183E3A] hover:bg-white dark:hover:bg-[#0D2422] hover:border-l-4 hover:border-l-[#19C7B1] hover:border-[#B8C2B3] dark:hover:border-[#18C5B7]'
+          ? 'bg-white dark:bg-[#0D2422] border-[#19C7B1] border-l-4 border-l-[#19C7B1]'
+          : 'bg-[#E9EFE7] dark:bg-[#091F1D] border-[#D9DED5] dark:border-[#183E3A] hover:bg-white dark:hover:bg-[#0D2422] hover:border-l-[#19C7B1] hover:border-[#B8C2B3] dark:hover:border-[#18C5B7]'
       }`}
     >
       {/* Top Header: Status & Distance */}
@@ -73,6 +84,15 @@ export const StationCard: React.FC<StationCardProps> = ({
               {station.chargerCategory}
             </span>
           )}
+          {station.source === 'database' ? (
+            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#18C5B7]/15 text-[#18C5B7] border border-[#18C5B7]/30">
+              ● Live DB
+            </span>
+          ) : station.isMock ? (
+            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300/40">
+              Demo Seed
+            </span>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           {station.verifiedCompatibility && (
@@ -151,28 +171,34 @@ export const StationCard: React.FC<StationCardProps> = ({
 
       {/* Action Buttons Row with 44px min touch target */}
       <div className="flex items-center gap-2 pt-1">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.04, backgroundColor: '#2DBDB5', color: '#fff' }}
+          whileTap={{ scale: 0.94 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
           onClick={(e) => {
             e.stopPropagation();
             onGetDirections();
           }}
-          className="flex-1 min-h-[44px] py-2 px-3 rounded-btn bg-white dark:bg-[#081B19] hover:bg-[#2DBDB5] dark:hover:bg-[#18C5B7] hover:text-white dark:hover:text-[#071715] text-[#123C3A] dark:text-[#E4EFEA] border border-[#D9DED5] dark:border-[#183E3A] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 shadow-sm cursor-pointer"
+          className="flex-1 min-h-[44px] py-2 px-3 rounded-btn bg-white dark:bg-[#081B19] text-[#123C3A] dark:text-[#E4EFEA] border border-[#D9DED5] dark:border-[#183E3A] text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
         >
-          <Navigation className="w-3.5 h-3.5 text-[#19C7B1] group-hover:text-white" />
+          <Navigation className="w-3.5 h-3.5 text-[#19C7B1]" />
           <span>Get Directions</span>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.04, backgroundColor: '#123C3A' }}
+          whileTap={{ scale: 0.94 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 24 }}
           onClick={(e) => {
             e.stopPropagation();
             onViewDetails();
           }}
-          className="flex-1 min-h-[44px] py-2 px-3 rounded-btn bg-[#19C7B1] hover:bg-[#123C3A] text-white border border-[#19C7B1] text-xs font-bold flex items-center justify-center gap-1 transition-all duration-200 shadow-glow-teal-sm cursor-pointer"
+          className="flex-1 min-h-[44px] py-2 px-3 rounded-btn bg-[#19C7B1] text-white border border-[#19C7B1] text-xs font-bold flex items-center justify-center gap-1 shadow-glow-teal-sm cursor-pointer"
         >
           <span>Details</span>
           <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };

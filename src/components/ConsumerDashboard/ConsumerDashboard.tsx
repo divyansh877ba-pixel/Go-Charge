@@ -11,6 +11,7 @@ import { AuthUser } from '../../hooks/useAuth';
 import { Station, Connector } from '../../types';
 import { VehicleModel, INDIAN_EV_DATABASE, CONNECTOR_SPECS } from '../../data/vehicles';
 import { useTheme } from '../../hooks/useTheme';
+import { fetchUserVehicles, addUserVehicle, deleteUserVehicle, fetchReservations } from '../../lib/supabaseService';
 
 export type ConsumerTab = 'overview' | 'bookings' | 'saved' | 'vehicles' | 'profile' | 'settings';
 
@@ -163,6 +164,75 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
   const { isDark, toggleTheme } = useTheme();
 
+  // Synchronize vehicles and reservations with Supabase database
+  useEffect(() => {
+    if (!user?.id) return;
+    let isMounted = true;
+
+    async function loadSupabaseUserData() {
+      // 1. Fetch real vehicles from Supabase
+      const dbVehicles = await fetchUserVehicles();
+      if (isMounted && dbVehicles && dbVehicles.length > 0) {
+        const mapped = dbVehicles.map((dbV) => {
+          const match = INDIAN_EV_DATABASE.find(
+            (iv) =>
+              iv.model.toLowerCase() === dbV.model.toLowerCase() ||
+              iv.brand.toLowerCase() === dbV.make.toLowerCase()
+          );
+          if (match) {
+            return { ...match, id: dbV.id };
+          }
+          return {
+            id: dbV.id,
+            brand: dbV.make,
+            model: dbV.model,
+            category: '4-Wheeler' as const,
+            subType: 'Electric Car' as const,
+            connectors: ['CCS2' as const],
+            fastChargingSupport: true,
+            maxAcKw: 7.2,
+            maxDcKw: 50,
+            batteryKwh: dbV.battery_capacity_kwh || 40.5,
+            realRangeKm: 312,
+            connectorDescription: 'CCS2 Type 2 Indian standard',
+          };
+        });
+        setSavedVehicles(mapped);
+      }
+
+      // 2. Fetch reservations from Supabase
+      const dbReservations = await fetchReservations();
+      if (isMounted && dbReservations && dbReservations.length > 0) {
+        const mappedBookings: ConsumerBooking[] = dbReservations.map((r, idx) => ({
+          id: r.id,
+          stationId: r.station_id || 'st-default',
+          stationName: 'Go Charge Station',
+          stationAddress: 'Delhi NCR Hub',
+          connectorType: 'CCS2 Fast Charger',
+          connectorPower: '60 kW',
+          dateTime: r.start_at || new Date().toISOString(),
+          durationMinutes: 45,
+          energyKwh: 34.2,
+          amount: 580,
+          status: (r.status as any) || 'upcoming',
+          otpCode: `${1000 + idx}`,
+          vehicleModel: 'My EV',
+          createdAt: r.created_at || new Date().toISOString(),
+        }));
+        setBookings((prev) => {
+          const ids = new Set(mappedBookings.map((mb) => mb.id));
+          return [...mappedBookings, ...prev.filter((pb) => !ids.has(pb.id))];
+        });
+      }
+    }
+
+    loadSupabaseUserData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
   // Save bookings to localStorage
   useEffect(() => {
     try {
@@ -188,19 +258,32 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     }
   };
 
-  const handleAddVehicleToGarage = (vehicle: VehicleModel) => {
+  const handleAddVehicleToGarage = async (vehicle: VehicleModel) => {
     if (!savedVehicles.some(v => v.id === vehicle.id)) {
       setSavedVehicles(prev => [...prev, vehicle]);
     }
     onSelectVehicle(vehicle);
     setIsAddVehicleOpen(false);
+
+    // Persist to Supabase if user is logged in
+    if (user?.id) {
+      const dbRecord = await addUserVehicle(vehicle);
+      if (dbRecord) {
+        setSavedVehicles(prev => prev.map(v => v.id === vehicle.id ? { ...v, id: dbRecord.id } : v));
+      }
+    }
   };
 
-  const handleRemoveVehicle = (vehicleId: string) => {
+  const handleRemoveVehicle = async (vehicleId: string) => {
     const updated = savedVehicles.filter(v => v.id !== vehicleId);
     setSavedVehicles(updated);
     if (selectedVehicle?.id === vehicleId) {
       onSelectVehicle(updated.length > 0 ? updated[0] : null);
+    }
+
+    // Delete from Supabase if user is logged in
+    if (user?.id) {
+      await deleteUserVehicle(vehicleId);
     }
   };
 

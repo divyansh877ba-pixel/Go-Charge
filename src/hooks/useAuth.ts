@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
+import { fetchProfile, upsertProfile, getUserPermissions, createHostOrganization } from '../lib/supabaseService';
 
 export type UserRole = 'consumer' | 'charger_owner';
 
@@ -18,245 +20,357 @@ export interface AuthUser {
   createdAt: string;
 }
 
-const STORAGE_KEY = 'amperway_auth_user';
+/**
+ * Normalizes Supabase Auth error messages with special handling for rate limits.
+ */
+export function formatAuthErrorMessage(error: any): string {
+  if (!error) return 'An unexpected error occurred. Please try again.';
+  const msg = typeof error === 'string' ? error : error.message || '';
+  const lower = msg.toLowerCase();
 
-export const DEMO_CONSUMER_USER: AuthUser = {
-  id: 'usr-consumer-101',
-  name: 'Rahul Sharma',
-  email: 'rahul.sharma@gocharge.in',
-  phone: '+91 98765 43210',
-  role: 'consumer',
-  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-  city: 'New Delhi',
-  createdAt: '2024-02-15'
-};
+  if (
+    lower.includes('rate limit') ||
+    lower.includes('over_email_send_rate_limit') ||
+    error.status === 429
+  ) {
+    return 'Email rate limit reached: Supabase limits email dispatch frequency for anti-spam protection. Please wait a few minutes before requesting another confirmation email, or check your spam/junk folder.';
+  }
 
-export const DEMO_OWNER_USER: AuthUser = {
-  id: 'usr-owner-202',
-  name: 'Vikramaditya Singhania',
-  email: 'vikram.singhania@gocharge.in',
-  phone: '+91 98201 44520',
-  role: 'charger_owner',
-  ownerType: 'business',
-  businessName: 'Singhania EV Hubs',
-  city: 'New Delhi, Delhi NCR',
-  ownsCharger: true,
-  isNewOwner: false,
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
-  createdAt: '2024-01-10'
-};
+  if (lower.includes('user already registered')) {
+    return 'This email address is already registered. If you have not verified your email yet, please use the resend confirmation option, or sign in.';
+  }
+
+  return msg;
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-      // Also check legacy storage for seamless migration
-      const legacy = localStorage.getItem('amperway_user');
-      if (legacy) {
-        const parsed = JSON.parse(legacy);
-        return {
-          id: 'usr-migrated-1',
-          name: parsed.name || 'EV Driver',
-          email: parsed.email || 'driver@gocharge.in',
-          phone: parsed.phone || '+91 98765 43210',
-          role: parsed.role === 'host' ? 'charger_owner' : 'consumer',
-          createdAt: new Date().toISOString()
-        };
-      }
-      return null;
-    } catch {
-      return null;
+  // Supabase session is the single source of truth; initialize as null
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Synchronize authenticated user with Supabase profiles and permissions
+  const syncSupabaseProfile = useCallback(async (sessionUser: any): Promise<AuthUser> => {
+    const meta = sessionUser.user_metadata || {};
+    const existingProfile = await fetchProfile(sessionUser.id);
+
+    const fullName = existingProfile?.full_name || meta.full_name || meta.name || sessionUser.email?.split('@')[0] || 'EV Driver';
+    const avatarUrl = existingProfile?.avatar_url || meta.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80';
+    const state = existingProfile?.state || meta.city || 'Delhi';
+
+    // Verify application permissions and organization membership directly from database
+    const perms = await getUserPermissions(sessionUser.id);
+    const role: UserRole = perms.role;
+
+    // If profile didn't exist in Supabase profiles table, safely create it now
+    if (!existingProfile) {
+      await upsertProfile({
+        id: sessionUser.id,
+        email: sessionUser.email,
+        full_name: fullName,
+        avatar_url: avatarUrl,
+        state,
+      });
     }
-  });
 
-  const [loading, setLoading] = useState(false);
+    const authUser: AuthUser = {
+      id: sessionUser.id,
+      name: fullName,
+      email: sessionUser.email || '',
+      phone: sessionUser.phone || meta.phone || '+91 98765 43210',
+      role,
+      ownerType: meta.owner_type || meta.ownerType || 'individual',
+      businessName: perms.organizationName || meta.business_name || meta.businessName,
+      city: state,
+      ownsCharger: perms.isHost || meta.ownsCharger,
+      isNewOwner: perms.isHost && !perms.hasStations,
+      avatarUrl,
+      createdAt: sessionUser.created_at || new Date().toISOString(),
+    };
 
-  // Sync to localStorage
+    return authUser;
+  }, []);
+
+  // Listen to Supabase Auth State Changes & Init Session
   useEffect(() => {
-    try {
-      if (user) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-        // Keep legacy key in sync for any backward compatibility
-        localStorage.setItem('amperway_user', JSON.stringify({
-          name: user.name,
-          phone: user.phone,
-          email: user.email,
-          role: user.role === 'charger_owner' ? 'host' : 'driver'
-        }));
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem('amperway_user');
-      }
-    } catch (e) {
-      console.warn('Failed to sync user to localStorage:', e);
-    }
-  }, [user]);
+    let isMounted = true;
 
-  // Sync from other components/storage updates
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        if (e.newValue) {
-          try {
-            setUser(JSON.parse(e.newValue));
-          } catch {}
-        } else {
+    async function initAuth() {
+      try {
+        const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr) {
+          console.warn('Supabase getSession error:', sessionErr.message);
+        }
+
+        if (session?.user && isMounted) {
+          // Cryptographically verify the session with the Supabase Auth server
+          const { data: { user: verifiedUser }, error: userErr } = await supabase.auth.getUser();
+          if (verifiedUser && !userErr && isMounted) {
+            const authUser = await syncSupabaseProfile(verifiedUser);
+            if (isMounted) {
+              setUser(authUser);
+            }
+          } else if (isMounted) {
+            setUser(null);
+          }
+        } else if (isMounted) {
           setUser(null);
         }
+      } catch (err) {
+        console.warn('Supabase auth initialization error:', err);
+        if (isMounted) setUser(null);
+      } finally {
+        if (isMounted) setLoading(false);
       }
+    }
+
+    initAuth();
+
+    // Subscribe to auth state updates
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
+        const authUser = await syncSupabaseProfile(session.user);
+        if (isMounted) {
+          setUser(authUser);
+          setLoading(false);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [syncSupabaseProfile]);
 
+  // Real Supabase Login with Email & Password
   const login = useCallback(async (
-    emailOrPhone: string,
-    password: string,
-    role: UserRole
+    emailInput: string,
+    passwordInput: string
   ): Promise<{ success: boolean; error?: string }> => {
     setLoading(true);
-    // Simulate network latency (400ms)
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    setLoading(false);
 
-    if (!emailOrPhone.trim()) {
-      return { success: false, error: 'Please enter your email or phone number.' };
-    }
-    if (!password || password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters.' };
-    }
-
-    // Role-tailored mock authentication
-    let authenticatedUser: AuthUser;
-    if (role === 'charger_owner') {
-      authenticatedUser = {
-        ...DEMO_OWNER_USER,
-        email: emailOrPhone.includes('@') ? emailOrPhone : DEMO_OWNER_USER.email,
-        phone: !emailOrPhone.includes('@') ? emailOrPhone : DEMO_OWNER_USER.phone,
-      };
-    } else {
-      authenticatedUser = {
-        ...DEMO_CONSUMER_USER,
-        email: emailOrPhone.includes('@') ? emailOrPhone : DEMO_CONSUMER_USER.email,
-        phone: !emailOrPhone.includes('@') ? emailOrPhone : DEMO_CONSUMER_USER.phone,
-      };
-    }
-
-    setUser(authenticatedUser);
-    return { success: true };
-  }, []);
-
-  const register = useCallback(async (
-    data: Partial<AuthUser> & { password?: string; ownsCharger?: boolean }
-  ): Promise<{ success: boolean; error?: string }> => {
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setLoading(false);
-
-    if (!data.name?.trim()) {
-      return { success: false, error: 'Please enter your full name.' };
-    }
-    if (!data.email?.trim() || !data.email.includes('@')) {
+    const cleanEmail = emailInput.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setLoading(false);
       return { success: false, error: 'Please enter a valid email address.' };
     }
-    if (!data.phone?.trim() || data.phone.replace(/\D/g, '').length < 10) {
-      return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
+    if (!passwordInput || passwordInput.length < 6) {
+      setLoading(false);
+      return { success: false, error: 'Password must be at least 6 characters long.' };
     }
 
-    const newUser: AuthUser = {
-      id: `usr-${Date.now()}`,
-      name: data.name.trim(),
-      email: data.email.trim().toLowerCase(),
-      phone: data.phone.trim().startsWith('+91') ? data.phone.trim() : `+91 ${data.phone.trim().replace(/^0+/, '')}`,
-      role: data.role || 'consumer',
-      ownerType: data.ownerType || 'individual',
-      businessName: data.businessName,
-      city: data.city || 'New Delhi',
-      ownsCharger: data.ownsCharger ?? (data.role === 'charger_owner' ? false : undefined),
-      isNewOwner: data.role === 'charger_owner',
-      avatarUrl: data.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-      createdAt: new Date().toISOString()
-    };
-
-    setUser(newUser);
-    return { success: true };
-  }, []);
-
-  const loginWithGoogle = useCallback(async (role: UserRole): Promise<{ success: boolean }> => {
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setLoading(false);
-
-    const googleUser: AuthUser = role === 'charger_owner'
-      ? {
-          ...DEMO_OWNER_USER,
-          email: 'vikram.google@gocharge.in',
-          name: 'Vikramaditya Singhania (Google)',
-        }
-      : {
-          ...DEMO_CONSUMER_USER,
-          email: 'rahul.google@gocharge.in',
-          name: 'Rahul Sharma (Google)',
-        };
-
-    setUser(googleUser);
-    return { success: true };
-  }, []);
-
-  const verifyPhoneOtp = useCallback(async (
-    phone: string,
-    otp: string,
-    role: UserRole,
-    name?: string
-  ): Promise<{ success: boolean; error?: string }> => {
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    setLoading(false);
-
-    if (otp.length < 4) {
-      return { success: false, error: 'Please enter the complete 4-digit verification code.' };
-    }
-
-    const otpUser: AuthUser = {
-      id: `usr-otp-${Date.now()}`,
-      name: name?.trim() || (role === 'charger_owner' ? 'Go Charge Host' : 'EV Driver'),
-      phone: phone.startsWith('+91') ? phone : `+91 ${phone}`,
-      email: `${phone.replace(/\D/g, '')}@gocharge.in`,
-      role,
-      createdAt: new Date().toISOString()
-    };
-
-    setUser(otpUser);
-    return { success: true };
-  }, []);
-
-  const quickDemoLogin = useCallback((role: UserRole) => {
-    if (role === 'charger_owner') {
-      setUser(DEMO_OWNER_USER);
-    } else {
-      setUser(DEMO_CONSUMER_USER);
-    }
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
     try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('amperway_user');
-    } catch {}
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: passwordInput,
+      });
+
+      if (error) {
+        setLoading(false);
+        // Generic, privacy-preserving error message as specified by security requirements
+        return {
+          success: false,
+          error: "Unable to sign in. Your email or password may be incorrect. If you don't have an account, please create one.",
+        };
+      }
+
+      if (data.user) {
+        const authUser = await syncSupabaseProfile(data.user);
+        setUser(authUser);
+      }
+
+      setLoading(false);
+      return { success: true };
+    } catch {
+      setLoading(false);
+      return {
+        success: false,
+        error: "Unable to sign in. Your email or password may be incorrect. If you don't have an account, please create one.",
+      };
+    }
+  }, [syncSupabaseProfile]);
+
+  // Real Supabase Registration with Email & Password
+  const register = useCallback(async (params: {
+    fullName: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    role?: UserRole;
+    ownerType?: 'individual' | 'business';
+    businessName?: string;
+    city?: string;
+  }): Promise<{ success: boolean; emailConfirmationRequired?: boolean; error?: string; message?: string }> => {
+    setLoading(true);
+
+    const cleanEmail = params.email.trim().toLowerCase();
+    const cleanName = params.fullName.trim();
+
+    if (!cleanName || cleanName.length < 2) {
+      setLoading(false);
+      return { success: false, error: 'Please enter your full name.' };
+    }
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setLoading(false);
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+    if (!params.password || params.password.length < 6) {
+      setLoading(false);
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+    if (params.password !== params.confirmPassword) {
+      setLoading(false);
+      return { success: false, error: 'Passwords do not match. Please verify your password.' };
+    }
+    if (params.role === 'charger_owner' && params.ownerType === 'business' && !params.businessName?.trim()) {
+      setLoading(false);
+      return { success: false, error: 'Please enter your business or commercial entity name.' };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: params.password,
+        options: {
+          data: {
+            full_name: cleanName,
+            name: cleanName,
+            role: params.role || 'consumer',
+            owner_type: params.ownerType || 'individual',
+            business_name: params.businessName?.trim() || undefined,
+            city: params.city?.trim() || 'New Delhi',
+          },
+        },
+      });
+
+      if (error) {
+        setLoading(false);
+        return { success: false, error: formatAuthErrorMessage(error) };
+      }
+
+      if (data.user) {
+        // If email confirmation is required, session will be null
+        if (!data.session) {
+          setLoading(false);
+          return {
+            success: true,
+            emailConfirmationRequired: true,
+            message: `Account created successfully! A confirmation link has been sent to ${cleanEmail}. Please check your inbox and verify your email address before signing in.`,
+          };
+        }
+
+        // Active session established: provision profile and organization
+        await upsertProfile({
+          id: data.user.id,
+          email: cleanEmail,
+          full_name: cleanName,
+          state: params.city?.trim() || 'New Delhi',
+          avatar_url: params.role === 'charger_owner'
+            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80'
+            : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
+        });
+
+        if (params.role === 'charger_owner' && params.businessName?.trim()) {
+          await createHostOrganization(params.businessName.trim());
+        }
+
+        const authUser = await syncSupabaseProfile(data.user);
+        setUser(authUser);
+        setLoading(false);
+        return { success: true, emailConfirmationRequired: false };
+      }
+
+      setLoading(false);
+      return { success: false, error: 'Registration failed. Please try again.' };
+    } catch (err: any) {
+      setLoading(false);
+      return { success: false, error: formatAuthErrorMessage(err) };
+    }
+  }, [syncSupabaseProfile]);
+
+  // Resend Email Verification with Rate Limit Handling & Cooldown Safety
+  const resendVerificationEmail = useCallback(async (emailInput: string): Promise<{ success: boolean; error?: string; isRateLimited?: boolean }> => {
+    setLoading(true);
+    const cleanEmail = emailInput.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setLoading(false);
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+
+    try {
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: cleanEmail,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      });
+
+      setLoading(false);
+      if (error) {
+        const isRateLimited = error.message?.toLowerCase().includes('rate limit') || 
+                              error.message?.toLowerCase().includes('over_email_send_rate_limit') ||
+                              (error as any).status === 429;
+        return {
+          success: false,
+          error: formatAuthErrorMessage(error),
+          isRateLimited,
+        };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      setLoading(false);
+      return {
+        success: false,
+        error: formatAuthErrorMessage(err),
+        isRateLimited: true,
+      };
+    }
   }, []);
 
-  const resetPassword = useCallback(async (email: string): Promise<{ success: boolean; message: string }> => {
+  // Real Supabase Logout
+  const logout = useCallback(async () => {
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setLoading(false);
-    return {
-      success: true,
-      message: `Password reset instructions have been sent to ${email}. (Demo simulation - check console or continue with test password)`
-    };
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Supabase signOut error:', err);
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
+  }, []);
+
+  // Real Supabase Password Reset Request
+  const resetPassword = useCallback(async (emailInput: string): Promise<{ success: boolean; message: string }> => {
+    setLoading(true);
+    try {
+      const cleanEmail = emailInput.trim().toLowerCase();
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: redirectUrl,
+      });
+      setLoading(false);
+      if (error) {
+        return { success: false, message: formatAuthErrorMessage(error) };
+      }
+      return {
+        success: true,
+        message: `If an account is associated with ${cleanEmail}, password reset instructions have been sent to that inbox.`,
+      };
+    } catch (err: any) {
+      setLoading(false);
+      return { success: false, message: formatAuthErrorMessage(err) };
+    }
   }, []);
 
   return {
@@ -268,9 +382,7 @@ export function useAuth() {
     loading,
     login,
     register,
-    loginWithGoogle,
-    verifyPhoneOtp,
-    quickDemoLogin,
+    resendVerificationEmail,
     logout,
     resetPassword,
   };

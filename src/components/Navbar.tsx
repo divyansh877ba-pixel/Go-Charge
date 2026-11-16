@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Search, MapPin, SlidersHorizontal, PlusCircle, 
-  Menu, X, ArrowRight, Sun, Moon, Globe, User, LogIn, LogOut, LayoutDashboard, Shield
+  Menu, X, ArrowRight, Globe, User, LogIn, LogOut, LayoutDashboard, Shield
 } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
 import { Language, TRANSLATIONS } from '../data/translations';
 import { VehicleModel } from '../data/vehicles';
 import { AuthUser } from '../hooks/useAuth';
 
-export type AppView = 'map' | 'about' | 'login' | 'consumer-dashboard' | 'owner-dashboard';
+export type AppView = 'home' | 'about' | 'map' | 'login' | 'consumer-dashboard' | 'owner-dashboard';
 
 interface NavbarProps {
   searchQuery: string;
@@ -52,17 +51,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { theme, isDark, toggleTheme } = useTheme();
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
-  // Resolve user info from authUser (preferred) or currentUser
-  const user = authUser || (currentUser ? {
-    name: currentUser.name,
-    email: currentUser.email || '',
-    phone: currentUser.phone || '',
-    role: currentUser.role === 'host' ? 'charger_owner' : 'consumer'
-  } : null);
+  // Supabase Auth as single source of truth
+  const user = authUser;
 
   const isConsumer = user?.role === 'consumer';
   const isOwner = user?.role === 'charger_owner';
@@ -118,13 +111,40 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Left: Brand Logo & Navigation */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-5 shrink-0">
-          <button 
+          <button
             type="button"
-            onClick={() => handleNavClick('about')}
+            onClick={() => handleNavClick('home')}
             className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] hover:border-[#18C5B7] transition-all duration-200 shadow-sm group cursor-pointer"
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#18C5B7] flex items-center justify-center text-white shadow-glow-teal-sm group-hover:rotate-12 transition-transform">
-              <Zap className="w-4 h-4 fill-white" />
+            {/* ── Go Charge SVG Logo Mark — G integrated with lightning bolt ── */}
+            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 group-hover:scale-105 transition-transform duration-300">
+              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Go Charge logo" className="w-full h-full">
+                <defs>
+                  <linearGradient id="gc-grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#18C5B7"/>
+                    <stop offset="100%" stopColor="#0E9B90"/>
+                  </linearGradient>
+                  <filter id="gc-glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+                {/* Background circle */}
+                <circle cx="18" cy="18" r="17" fill="url(#gc-grad)" />
+                {/* Letter G arc */}
+                <path
+                  d="M24 14.5A8 8 0 1 0 25.5 20H19.5v-2.5H26.5V22A10 10 0 1 1 26 13z"
+                  fill="white"
+                  fillOpacity="0.95"
+                  filter="url(#gc-glow)"
+                />
+                {/* Lightning bolt overlay — fused into the G crossbar */}
+                <path
+                  d="M21 10.5L17 18.5H21L19 25.5L25.5 15.5H21.5L24.5 10.5Z"
+                  fill="#071715"
+                  fillOpacity="0.82"
+                />
+              </svg>
             </div>
             <div className="text-left">
               <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#123C3A] dark:text-white group-hover:text-[#18C5B7] transition-colors leading-none block">
@@ -152,10 +172,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
-              onClick={() => handleNavClick('about', 'how-it-works')}
+              onClick={() => handleNavClick('home', 'how-it-works')}
               className="px-3 py-1.5 rounded-pill text-[#5E716E] dark:text-[#88ABA6] hover:text-[#123C3A] dark:hover:text-white transition-all cursor-pointer"
             >
               {t.howItWorks}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick('about')}
+              className={`px-3 py-1.5 rounded-pill transition-all duration-200 cursor-pointer ${
+                activeView === 'about'
+                  ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                  : 'text-[#5E716E] dark:text-[#88ABA6] hover:text-[#123C3A] dark:hover:text-white'
+              }`}
+            >
+              About Us
             </button>
 
             {/* If Consumer is logged in, show Consumer Dashboard link */}
@@ -266,26 +298,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* 2. THEME SWITCHER BUTTON */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            id="theme-toggle-btn"
-            aria-label={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
-            title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
-            className="min-w-[36px] sm:min-w-[40px] h-9 sm:h-10 px-2 sm:px-3 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border-2 border-[#18C5B7]/40 dark:border-[#18C5B7] hover:border-[#18C5B7] text-[#123C3A] dark:text-white transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            {isDark ? (
-              <Sun className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B] animate-in spin-in-180 duration-300 shrink-0" />
-            ) : (
-              <Moon className="w-4 h-4 text-[#123C3A] fill-[#123C3A] shrink-0" />
-            )}
-            <span className="text-[11px] font-extrabold hidden md:inline">
-              {isDark ? 'Light' : 'Dark'}
-            </span>
-          </button>
-
-          {/* 3. Filter button (quick drawer trigger) */}
+          {/* Quick Filter button (drawer trigger) */}
           <button
             type="button"
             onClick={onOpenFilterModal}
@@ -312,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="text-xs font-bold text-[#123C3A] dark:text-white block leading-none truncate max-w-[80px]">
                     {user.name.split(' ')[0]}
                   </span>
-                  <span className="text-[9px] font-extrabold text-[#18C5B7] uppercase tracking-wider block">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider block text-[#18C5B7]">
                     {isOwner ? 'Host' : 'Consumer'}
                   </span>
                 </div>
@@ -380,10 +393,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 type="button"
-                onClick={() => handleNavClick('about', 'how-it-works')}
+                onClick={() => handleNavClick('home', 'how-it-works')}
                 className="w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between bg-[#E9EFE7] dark:bg-[#0D2422] text-[#123C3A] dark:text-white transition-colors cursor-pointer"
               >
                 <span>{t.howItWorks}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNavClick('about')}
+                className={`w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                  activeView === 'about'
+                    ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                    : 'bg-[#E9EFE7] dark:bg-[#0D2422] text-[#123C3A] dark:text-white'
+                }`}
+              >
+                <span>About Us</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -441,7 +467,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                     <div>
                       <span className="text-xs font-bold text-[#123C3A] dark:text-white block">{user.name}</span>
-                      <span className="text-[10px] text-[#18C5B7] uppercase font-bold">{isOwner ? 'Host' : 'Consumer'}</span>
+                      <span className="text-[10px] uppercase font-bold text-[#18C5B7]">
+                        {isOwner ? 'Host' : 'Consumer'}
+                      </span>
                     </div>
                   </div>
                   {onLogout && (

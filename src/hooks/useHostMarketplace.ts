@@ -8,6 +8,8 @@ import {
   MONTHLY_EARNINGS_DATA 
 } from '../data/mockHostData';
 import { Station } from '../types';
+import { supabase } from '../lib/supabase';
+import { createStation } from '../lib/supabaseService';
 
 const CHARGERS_KEY = 'gocharge_host_chargers_v1';
 const BOOKINGS_KEY = 'gocharge_host_bookings_v1';
@@ -88,6 +90,71 @@ export function useHostMarketplace() {
     }
   }, [transactions]);
 
+  // Synchronize stations created by host with Supabase
+  useEffect(() => {
+    let isMounted = true;
+    async function loadHostStations() {
+      try {
+        const session = (await supabase.auth.getSession()).data.session;
+        if (!session?.user?.id) return;
+
+        const { data, error } = await supabase
+          .from('stations')
+          .select(`
+            id, name, description, address_line_1, city, postal_code, is_public, created_at,
+            connectors ( id, connector_standard, max_power_kw )
+          `)
+          .eq('created_by', session.user.id);
+
+        if (isMounted && data && data.length > 0) {
+          const mappedChargers: HostCharger[] = data.map((st) => {
+            const conn = (st as any).connectors?.[0];
+            return {
+              id: st.id,
+              name: st.name,
+              category: 'Commercial' as any,
+              connectorType: (conn?.connector_standard as any) || 'CCS2',
+              capacityKw: Number(conn?.max_power_kw) || 50,
+              description: st.description || 'Fast charging station',
+              address: st.address_line_1 || 'Delhi',
+              city: st.city || 'New Delhi',
+              state: 'Delhi',
+              pincode: st.postal_code || '110001',
+              lat: 28.6139,
+              lng: 77.2090,
+              pricePerKwh: 18,
+              minDurationMinutes: 15,
+              availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+              openingTime: '00:00',
+              closingTime: '23:59',
+              is24x7: true,
+              images: [],
+              status: 'active',
+              createdAt: st.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+              totalBookings: 0,
+              totalEarnings: 0,
+              rating: 5.0,
+              reviewsCount: 0,
+            };
+          });
+
+          setChargers((prev) => {
+            const ids = new Set(mappedChargers.map((mc) => mc.id));
+            return [...mappedChargers, ...prev.filter((pc) => !ids.has(pc.id))];
+          });
+        }
+      } catch (err) {
+        console.warn('Error loading host stations from Supabase:', err);
+      }
+    }
+
+    loadHostStations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Action: Add New Charger from 5-step registration wizard
   const addCharger = useCallback((newChargerData: Omit<HostCharger, 'id' | 'createdAt' | 'totalBookings' | 'totalEarnings' | 'rating' | 'reviewsCount'>): HostCharger => {
     const id = `hc-${Date.now()}`;
@@ -103,6 +170,26 @@ export function useHostMarketplace() {
     };
 
     setChargers((prev) => [newCharger, ...prev]);
+
+    // Asynchronously insert station & connector into Supabase
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        createStation({
+          name: newChargerData.name,
+          description: newChargerData.description,
+          address: newChargerData.address,
+          city: newChargerData.city,
+          pincode: newChargerData.pincode,
+          capacityKw: newChargerData.capacityKw,
+          connectorType: newChargerData.connectorType,
+        }).then((res) => {
+          if (res.stationId) {
+            setChargers((prev) => prev.map((c) => (c.id === id ? { ...c, id: res.stationId! } : c)));
+          }
+        });
+      }
+    });
+
     return newCharger;
   }, []);
 

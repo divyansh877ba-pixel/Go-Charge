@@ -8,6 +8,7 @@ import { FilterBar } from './components/StationList/FilterBar';
 import { StationList } from './components/StationList/StationList';
 import { StationDetailPage } from './components/DetailPage/StationDetailPage';
 import { LandingPage } from './components/LandingPage/LandingPage';
+import { AboutUsPage } from './components/About/AboutUsPage';
 import { ChargingSessionModal } from './components/Modals/ChargingSessionModal';
 import { NavigationDirectionsModal } from './components/Modals/NavigationDirectionsModal';
 import { FilterModal } from './components/Modals/FilterModal';
@@ -18,18 +19,38 @@ import { useHostMarketplace } from './hooks/useHostMarketplace';
 import { OwnerDashboard } from './components/HostDashboard/OwnerDashboard';
 import { ChargerRegistrationModal } from './components/HostDashboard/ChargerRegistrationModal';
 import { VehicleSelectorModal } from './components/VehicleSelector/VehicleSelectorModal';
-import { AuthModal } from './components/Modals/AuthModal';
 import { TwoWayLoginPage } from './components/Auth/TwoWayLoginPage';
 import { ConsumerDashboard } from './components/ConsumerDashboard/ConsumerDashboard';
 import { RoleGuardModal } from './components/Auth/RoleGuardModal';
 import { useAuth, UserRole, AuthUser } from './hooks/useAuth';
+import { useTheme } from './hooks/useTheme';
 import { AppView } from './components/Navbar';
 import { VehicleModel, isStationCompatibleWithVehicle } from './data/vehicles';
 import { Language } from './data/translations';
-import { Navigation } from 'lucide-react';
+import { Navigation, Zap } from 'lucide-react';
+import { fetchStations } from './lib/supabaseService';
 
 export function App() {
+  useTheme();
   const [stations, setStations] = useState<Station[]>(MOCK_STATIONS);
+
+  // Load real stations from Supabase database
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDbStations() {
+      const dbStations = await fetchStations();
+      if (isMounted && dbStations && dbStations.length > 0) {
+        setStations((prev) => {
+          const dbIds = new Set(dbStations.map((s) => s.id));
+          return [...dbStations, ...prev.filter((s) => !dbIds.has(s.id))];
+        });
+      }
+    }
+    loadDbStations();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // Two-Way Role-Based Auth Architecture
   const {
@@ -64,8 +85,11 @@ export function App() {
       if (path === '/map' || hash === '#map') {
         return 'map';
       }
+      if (path.includes('/about') || hash.includes('#about')) {
+        return 'about';
+      }
     }
-    return 'about';
+    return 'home';
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,22 +128,11 @@ export function App() {
     }
   });
 
-  // Demo User Auth State (Requirement 10 & 14)
-  const [currentUser, setCurrentUser] = useState<{ name: string; phone: string; role: 'driver' | 'host' } | null>(() => {
-    try {
-      const saved = localStorage.getItem('amperway_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
   // Geolocation locating indicator
   const [isLocating, setIsLocating] = useState(false);
 
   // Modals state
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isListChargerOpen, setIsListChargerOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [directionsStation, setDirectionsStation] = useState<Station | null>(null);
@@ -145,8 +158,8 @@ export function App() {
     convertToStation,
   } = useHostMarketplace();
 
-  // Optimistic Updates & Undo Toasts
-  const { favorites, isFavorite, toggleFavorite, undoToast, dismissUndoToast } = useFavorites();
+  // Optimistic Updates & Undo Toasts (synced with Supabase favorites)
+  const { favorites, isFavorite, toggleFavorite, undoToast, dismissUndoToast } = useFavorites(authUser?.id);
 
   // Search input ref for keyboard shortcut (Ctrl+K)
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -183,8 +196,11 @@ export function App() {
       if (path === '/map' || hash === '#map') {
         return 'map';
       }
+      if (path.includes('/about') || hash.includes('#about')) {
+        return 'about';
+      }
     }
-    return 'about';
+    return 'home';
   };
 
   const handleSetActiveView = (view: AppView, forceUrl?: string) => {
@@ -221,6 +237,10 @@ export function App() {
           targetPath = '/login';
         } else if (view === 'map') {
           targetPath = '/map';
+        } else if (view === 'about') {
+          targetPath = '/about';
+        } else if (view === 'home') {
+          targetPath = '/';
         }
         if (window.location.pathname !== targetPath) {
           window.history.pushState({ view }, '', targetPath);
@@ -245,11 +265,6 @@ export function App() {
 
   const handleAuthSuccess = (loggedUser: AuthUser) => {
     setAuthUser(loggedUser);
-    setCurrentUser({
-      name: loggedUser.name,
-      phone: loggedUser.phone,
-      role: loggedUser.role === 'charger_owner' ? 'host' : 'driver'
-    });
     setLoginInitialRole(null);
     setRoleGuardMismatch(null);
 
@@ -264,11 +279,18 @@ export function App() {
     });
   };
 
-  const handleLogout = () => {
-    authLogout();
-    setCurrentUser(null);
+  // Enforce Dashboard Route Protection for unauthenticated visitors
+  useEffect(() => {
+    if (authLoading) return;
+    if (!authUser && (activeView === 'owner-dashboard' || activeView === 'consumer-dashboard')) {
+      handleSetActiveView('login', '/login');
+    }
+  }, [authLoading, authUser, activeView]);
+
+  const handleLogout = async () => {
+    await authLogout();
     setRoleGuardMismatch(null);
-    handleSetActiveView('about');
+    handleSetActiveView('login', '/login');
   };
 
   const handleOpenDetailStation = (st: Station) => {
@@ -323,15 +345,6 @@ export function App() {
     }
   };
 
-  const handleLegacyAuthModalLogin = (user: { name: string; phone: string; role: 'driver' | 'host' }) => {
-    setCurrentUser(user);
-    setIsAuthModalOpen(false);
-    if (user.role === 'host') {
-      handleSetActiveView('owner-dashboard');
-    } else {
-      handleSetActiveView('consumer-dashboard');
-    }
-  };
 
   const handleSearchWithVehicle = (query: string, vehicle: VehicleModel | null) => {
     if (vehicle) {
@@ -382,8 +395,6 @@ export function App() {
           setDirectionsStation(null);
         } else if (isVehicleModalOpen) {
           setIsVehicleModalOpen(false);
-        } else if (isAuthModalOpen) {
-          setIsAuthModalOpen(false);
         } else if (isListChargerOpen) {
           setIsListChargerOpen(false);
         } else if (isFilterModalOpen) {
@@ -424,7 +435,6 @@ export function App() {
     chargingSessionData,
     directionsStation,
     isVehicleModalOpen,
-    isAuthModalOpen,
     isListChargerOpen,
     isFilterModalOpen,
     detailStation,
@@ -585,7 +595,7 @@ export function App() {
 
   return (
     <div className="relative min-h-screen bg-[#F4F1E8] dark:bg-[#071715] text-[#14201F] dark:text-[#E4EFEA] font-sans overflow-x-hidden transition-colors duration-300">
-      
+
       {/* Sticky Top Navbar (Interactive & elevated above map/controls) */}
       {!detailStation && activeView !== 'owner-dashboard' && activeView !== 'consumer-dashboard' && activeView !== 'login' && (
         <Navbar
@@ -616,7 +626,6 @@ export function App() {
           selectedVehicle={selectedVehicle}
           onOpenVehicleModal={() => setIsVehicleModalOpen(true)}
           onOpenAuthModal={() => handleSetActiveView('login')}
-          currentUser={currentUser}
           authUser={authUser}
           onLogout={handleLogout}
           lang={lang}
@@ -625,7 +634,18 @@ export function App() {
       )}
 
       {/* Page Transitions Orchestrator */}
-      <AnimatePresence mode="wait">
+      {authLoading ? (
+        <div className="min-h-screen bg-[#F4F1E8] dark:bg-[#071715] flex flex-col items-center justify-center text-[#123C3A] dark:text-[#E4EFEA] gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#19C7B1]/20 flex items-center justify-center animate-pulse">
+            <Zap className="w-6 h-6 text-[#19C7B1]" />
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-sm font-extrabold tracking-tight">Go Charge</span>
+            <span className="text-xs text-[#5E716E] dark:text-[#8FAFA9]">Verifying Supabase session...</span>
+          </div>
+        </div>
+      ) : (
+        <AnimatePresence mode="wait">
         {detailStation ? (
           <motion.div
             key={currentViewKey}
@@ -656,7 +676,7 @@ export function App() {
             <TwoWayLoginPage
               initialRole={loginInitialRole}
               onSuccess={handleAuthSuccess}
-              onCancel={() => handleSetActiveView('about')}
+              onCancel={() => handleSetActiveView('home')}
             />
           </motion.div>
         ) : activeView === 'consumer-dashboard' ? (
@@ -685,7 +705,7 @@ export function App() {
               <TwoWayLoginPage
                 initialRole="consumer"
                 onSuccess={handleAuthSuccess}
-                onCancel={() => handleSetActiveView('about')}
+                onCancel={() => handleSetActiveView('home')}
               />
             )}
           </motion.div>
@@ -718,7 +738,7 @@ export function App() {
               <TwoWayLoginPage
                 initialRole="charger_owner"
                 onSuccess={handleAuthSuccess}
-                onCancel={() => handleSetActiveView('about')}
+                onCancel={() => handleSetActiveView('home')}
               />
             )}
           </motion.div>
@@ -730,11 +750,28 @@ export function App() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.24, ease: "easeOut" }}
           >
+            <AboutUsPage
+              onGoToHome={() => handleSetActiveView('home')}
+              onGoToMap={() => handleSetActiveView('map')}
+              onOpenListCharger={() => setIsListChargerOpen(true)}
+              onOpenHostDashboard={() => handleSetActiveView('owner-dashboard')}
+              lang={lang}
+            />
+          </motion.div>
+        ) : activeView === 'home' ? (
+          <motion.div
+            key="home-view"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
+          >
             <div className="pt-16 sm:pt-20">
               <LandingPage
                 onGoToMap={() => handleSetActiveView('map')}
                 onOpenListCharger={() => setIsListChargerOpen(true)}
                 onOpenHostDashboard={() => handleSetActiveView('owner-dashboard')}
+                onNavigateToAbout={() => handleSetActiveView('about')}
                 selectedVehicle={selectedVehicle}
                 onSelectVehicle={handleSelectVehicle}
                 onOpenVehicleModal={() => setIsVehicleModalOpen(true)}
@@ -831,6 +868,7 @@ export function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      )}
 
       {/* Vehicle Selection Modal (3 Steps) */}
       <VehicleSelectorModal
@@ -846,12 +884,6 @@ export function App() {
         }}
       />
 
-      {/* Simulated Driver / Host Auth Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLogin={handleLegacyAuthModalLogin}
-      />
 
       {/* Role-Based Guard Mismatch Interceptor Modal */}
       {roleGuardMismatch && authUser && (

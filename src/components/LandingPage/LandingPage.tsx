@@ -17,6 +17,7 @@ interface LandingPageProps {
   onGoToMap: () => void;
   onOpenListCharger: () => void;
   onOpenHostDashboard?: () => void;
+  onNavigateToAbout?: () => void;
   selectedVehicle: VehicleModel | null;
   onSelectVehicle: (vehicle: VehicleModel | null) => void;
   onOpenVehicleModal: () => void;
@@ -30,6 +31,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onGoToMap,
   onOpenListCharger,
   onOpenHostDashboard,
+  onNavigateToAbout,
   selectedVehicle,
   onSelectVehicle,
   onOpenVehicleModal,
@@ -465,6 +467,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <a href="#how-it-works" className="hover:text-[#19C7B1] transition-colors">
               How It Works
             </a>
+            {onNavigateToAbout && (
+              <button onClick={onNavigateToAbout} className="hover:text-[#19C7B1] transition-colors">
+                About Us
+              </button>
+            )}
           </div>
         </div>
 

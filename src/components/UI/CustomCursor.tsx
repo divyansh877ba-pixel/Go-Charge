@@ -1,2 +1,3 @@
-// Cursor tracker removed per user specification.
+// Custom cursor removed — using default browser cursor.
 export {};
+

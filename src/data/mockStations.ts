@@ -74,7 +74,7 @@ export const INDIAN_CITIES_COORDINATES: { [cityName: string]: { lat: number; lng
   'kavaratti': { lat: 10.5667, lng: 72.6417, zoom: 12, state: 'Lakshadweep' }
 };
 
-export const MOCK_STATIONS: Station[] = [
+const RAW_MOCK_STATIONS: Station[] = [
   // ==========================================
   // 1. NATIONAL CAPITAL REGION (DELHI NCR) - DEFAULT
   // ==========================================
@@ -2341,6 +2341,12 @@ export const MOCK_STATIONS: Station[] = [
     ]
   }
 ];
+
+export const MOCK_STATIONS: Station[] = RAW_MOCK_STATIONS.map((s) => ({
+  ...s,
+  isMock: true,
+  source: 'mock' as const,
+}));
 
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // km

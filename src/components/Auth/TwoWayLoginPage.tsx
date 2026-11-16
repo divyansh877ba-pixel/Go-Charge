@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Car, Zap, ArrowRight, ArrowLeft, Mail, Lock, Eye, EyeOff, 
   Smartphone, ShieldCheck, CheckCircle2, AlertCircle, Building2, 
-  User, MapPin, Sparkles, Sun, Moon, HelpCircle, Check
+  User, MapPin, Sun, Moon, HelpCircle, Check, UserPlus, Clock, Send, RefreshCw
 } from 'lucide-react';
 import { UserRole, AuthUser } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { supabase } from '../../lib/supabase';
+import { fetchProfile, upsertProfile, getUserPermissions, createHostOrganization } from '../../lib/supabaseService';
 
 interface TwoWayLoginPageProps {
   onSuccess: (user: AuthUser) => void;
@@ -33,7 +35,9 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   
@@ -45,75 +49,133 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
 
   // Phone OTP State
   const [otpSent, setOtpSent] = useState(false);
-  const [otpValues, setOtpValues] = useState(['', '', '', '']);
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
 
-  // Forgot Password State
+  // Resend Email Confirmation State (with 60-second cooldown)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [resendLoading, setResendLoading] = useState<boolean>(false);
+
+  // Forgot Password State (with cooldown)
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [forgotCooldown, setForgotCooldown] = useState<number>(0);
 
   // UI States
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
-  // Helper to persist session and callback
-  const saveAndSucceed = (userObj: AuthUser) => {
+  // Restore Resend Cooldown from sessionStorage on mount
+  useEffect(() => {
     try {
-      localStorage.setItem('amperway_auth_user', JSON.stringify(userObj));
-      localStorage.setItem('amperway_user', JSON.stringify({
-        name: userObj.name,
-        phone: userObj.phone,
-        email: userObj.email,
-        role: userObj.role === 'charger_owner' ? 'host' : 'driver'
-      }));
+      const stored = sessionStorage.getItem('gocharge_resend_cooldown');
+      if (stored) {
+        const remaining = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+        if (remaining > 0) {
+          setResendCooldown(remaining);
+        } else {
+          sessionStorage.removeItem('gocharge_resend_cooldown');
+        }
+      }
     } catch {}
-    onSuccess(userObj);
-  };
+  }, []);
 
-  // 1-Click Demo Fill & Submit Helper
-  const handleQuickDemo = async (role: UserRole) => {
-    setLoading(true);
+  // Cooldown countdown tick (solely updates local integer, no network requests)
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          try {
+            sessionStorage.removeItem('gocharge_resend_cooldown');
+          } catch {}
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Forgot Password cooldown tick
+  useEffect(() => {
+    if (forgotCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setForgotCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [forgotCooldown]);
+
+  // Dedicated Resend Confirmation Email Handler with 60s cooldown
+  const handleResendConfirmation = async () => {
+    if (resendLoading || resendCooldown > 0) return;
+
+    const targetEmail = (pendingVerificationEmail || email).trim().toLowerCase();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      setError('Please provide a valid email address to resend the verification email.');
+      return;
+    }
+
+    setResendLoading(true);
     setError(null);
-    await new Promise((r) => setTimeout(r, 450));
-    setLoading(false);
 
-    if (role === 'charger_owner') {
-      const ownerUser: AuthUser = {
-        id: 'usr-owner-202',
-        name: 'Vikramaditya Singhania',
-        email: 'vikram.singhania@gocharge.in',
-        phone: '+91 98201 44520',
-        role: 'charger_owner',
-        ownerType: 'business',
-        businessName: 'Singhania EV Hubs',
-        city: 'New Delhi, Delhi NCR',
-        ownsCharger: true,
-        isNewOwner: false,
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
-        createdAt: '2024-01-10'
-      };
-      saveAndSucceed(ownerUser);
-    } else {
-      const consumerUser: AuthUser = {
-        id: 'usr-consumer-101',
-        name: 'Rahul Sharma',
-        email: 'rahul.sharma@gocharge.in',
-        phone: '+91 98765 43210',
-        role: 'consumer',
-        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-        city: 'New Delhi',
-        createdAt: '2024-02-15'
-      };
-      saveAndSucceed(consumerUser);
+    try {
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
+      const { error: resendErr } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      });
+
+      setResendLoading(false);
+
+      if (resendErr) {
+        const lowerMsg = (resendErr.message || '').toLowerCase();
+        const isRateLimited = lowerMsg.includes('rate limit') || 
+                              lowerMsg.includes('over_email_send_rate_limit') ||
+                              (resendErr as any).status === 429;
+        if (isRateLimited) {
+          // Enforce cooldown so user cannot spam further
+          setResendCooldown(60);
+          try {
+            sessionStorage.setItem('gocharge_resend_cooldown', (Date.now() + 60000).toString());
+          } catch {}
+          setError('Email rate limit reached: Supabase limits email dispatch frequency for anti-spam protection. Please wait a few minutes before requesting another confirmation email, or check your spam/junk folder.');
+        } else {
+          setError(resendErr.message);
+        }
+        return;
+      }
+
+      // Success: initiate 60s cooldown
+      setResendCooldown(60);
+      try {
+        sessionStorage.setItem('gocharge_resend_cooldown', (Date.now() + 60000).toString());
+      } catch {}
+      setSuccessNotice(`Verification email resent to ${targetEmail}! Please check your inbox and spam folder.`);
+      setError(null);
+    } catch (err: any) {
+      setResendLoading(false);
+      setError(err.message || 'Failed to dispatch verification email.');
     }
   };
 
-  // Email/Password Submit Handler
+  // Email/Password Submit Handler with Supabase Auth
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
-    if (!email.trim() || !email.includes('@')) {
+    // Prevent duplicate form submissions while a request is in progress
+    if (loading) return;
+
+    setError(null);
+    setSuccessNotice(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
       setError('Please provide a valid email address.');
       return;
     }
@@ -121,200 +183,397 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
       setError('Password must be at least 6 characters long.');
       return;
     }
-    if (authMode === 'signup' && !name.trim()) {
-      setError('Please provide your full name.');
-      return;
-    }
-    if (authMode === 'signup' && selectedRole === 'charger_owner' && ownerType === 'business' && !businessName.trim()) {
-      setError('Please provide your business or commercial entity name.');
-      return;
+
+    if (authMode === 'signup') {
+      if (!name.trim() || name.trim().length < 2) {
+        setError('Please provide your full name.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match. Please verify your password.');
+        return;
+      }
+      if (selectedRole === 'charger_owner' && ownerType === 'business' && !businessName.trim()) {
+        setError('Please provide your business or commercial entity name.');
+        return;
+      }
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setLoading(false);
 
-    const userObj: AuthUser = {
-      id: `usr-${Date.now()}`,
-      name: name.trim() || (selectedRole === 'charger_owner' ? 'Go Charge Host' : 'EV Driver'),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim() ? (phone.startsWith('+91') ? phone : `+91 ${phone}`) : '+91 98765 43210',
-      role: selectedRole || 'consumer',
-      ownerType: selectedRole === 'charger_owner' ? ownerType : undefined,
-      businessName: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
-      city: city.trim(),
-      ownsCharger: selectedRole === 'charger_owner' ? ownsCharger : undefined,
-      isNewOwner: authMode === 'signup' && selectedRole === 'charger_owner',
-      avatarUrl: selectedRole === 'charger_owner'
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80'
-        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-      createdAt: new Date().toISOString()
-    };
+    try {
+      if (authMode === 'signin') {
+        // STRICT: Never calls signUp() during login
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
 
-    saveAndSucceed(userObj);
+        if (authError || !authData.user) {
+          setLoading(false);
+          const lowerMsg = (authError?.message || '').toLowerCase();
+
+          // Explicit detection of unconfirmed email
+          if (lowerMsg.includes('email not confirmed')) {
+            setPendingVerificationEmail(cleanEmail);
+            setError('Email verification pending: Your account has been registered, but your email address has not been confirmed yet. Please verify your email using the link sent to your inbox, or request a new one below.');
+            return;
+          }
+
+          // Privacy-preserving generic error per security requirements
+          setError("Unable to sign in. Your email or password may be incorrect. If you don't have an account, please create one.");
+          return;
+        }
+
+        // Verify authenticated user with Supabase server
+        const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+        const activeUser = verifiedUser || authData.user;
+
+        const profile = await fetchProfile(activeUser.id);
+        const perms = await getUserPermissions(activeUser.id);
+        const meta = activeUser.user_metadata || {};
+        const fullName = profile?.full_name || meta.full_name || meta.name || cleanEmail.split('@')[0];
+        const role: UserRole = perms.role;
+
+        const userObj: AuthUser = {
+          id: activeUser.id,
+          name: fullName,
+          email: activeUser.email || cleanEmail,
+          phone: activeUser.phone || meta.phone || '+91 98765 43210',
+          role,
+          ownerType: meta.owner_type || meta.ownerType || ownerType,
+          businessName: perms.organizationName || meta.business_name || meta.businessName || businessName,
+          city: profile?.state || city,
+          ownsCharger: perms.isHost || meta.ownsCharger,
+          isNewOwner: perms.isHost && !perms.hasStations,
+          avatarUrl: profile?.avatar_url || meta.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
+          createdAt: activeUser.created_at || new Date().toISOString(),
+        };
+
+        setLoading(false);
+        onSuccess(userObj);
+        return;
+      } else {
+        // Sign Up with Supabase Auth (deliberate single user submission)
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: {
+              full_name: name.trim(),
+              name: name.trim(),
+              phone: phone.trim() ? (phone.startsWith('+91') ? phone : `+91 ${phone}`) : '',
+              role: selectedRole || 'consumer',
+              owner_type: selectedRole === 'charger_owner' ? ownerType : undefined,
+              business_name: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
+              city: city.trim(),
+              ownsCharger: selectedRole === 'charger_owner' ? ownsCharger : undefined,
+            },
+          },
+        });
+
+        if (authError) {
+          setLoading(false);
+          const lowerMsg = (authError.message || '').toLowerCase();
+
+          // Handle rate limit error gracefully
+          if (lowerMsg.includes('rate limit') || lowerMsg.includes('over_email_send_rate_limit') || (authError as any).status === 429) {
+            setPendingVerificationEmail(cleanEmail);
+            setError('Email rate limit reached: Supabase limits email dispatch frequency for anti-spam protection. Please wait a few minutes before trying again, or check your spam/junk folder for previous verification emails.');
+            return;
+          }
+
+          if (lowerMsg.includes('already registered')) {
+            setPendingVerificationEmail(cleanEmail);
+            setError('This email address is already registered. If you have not verified your email yet, click the resend confirmation button below, or switch to Sign In.');
+            return;
+          }
+
+          setError(authError.message);
+          return;
+        }
+
+        if (authData.user) {
+          // If email confirmation is enabled, session is null
+          if (!authData.session) {
+            setLoading(false);
+            setPendingVerificationEmail(cleanEmail);
+            // Start 60s cooldown
+            setResendCooldown(60);
+            try {
+              sessionStorage.setItem('gocharge_resend_cooldown', (Date.now() + 60000).toString());
+            } catch {}
+            setSuccessNotice(`Account registered successfully! A confirmation link has been sent to ${cleanEmail}. Please verify your email before signing in.`);
+            setAuthMode('signin');
+            return;
+          }
+
+          // Active session: provision profile in public.profiles
+          await upsertProfile({
+            id: authData.user.id,
+            email: cleanEmail,
+            full_name: name.trim(),
+            avatar_url: selectedRole === 'charger_owner'
+              ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80'
+              : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
+            state: city.trim(),
+          });
+
+          if (selectedRole === 'charger_owner' && ownerType === 'business' && businessName.trim()) {
+            await createHostOrganization(businessName.trim());
+          }
+
+          const perms = await getUserPermissions(authData.user.id);
+
+          const userObj: AuthUser = {
+            id: authData.user.id,
+            name: name.trim(),
+            email: cleanEmail,
+            phone: phone.trim() ? (phone.startsWith('+91') ? phone : `+91 ${phone}`) : '+91 98765 43210',
+            role: selectedRole || perms.role,
+            ownerType: selectedRole === 'charger_owner' ? ownerType : undefined,
+            businessName: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
+            city: city.trim(),
+            ownsCharger: selectedRole === 'charger_owner' ? ownsCharger : undefined,
+            isNewOwner: selectedRole === 'charger_owner',
+            avatarUrl: selectedRole === 'charger_owner'
+              ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80'
+              : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
+            createdAt: authData.user.created_at || new Date().toISOString(),
+          };
+
+          setLoading(false);
+          onSuccess(userObj);
+          return;
+        }
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || 'Authentication error.');
+    }
   };
 
-  // Phone OTP Flow Handler
-  const handlePhoneSendOtp = (e: React.FormEvent) => {
+  // Phone OTP Flow via Supabase Auth
+  const handlePhoneSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       setError('Please enter a valid 10-digit Indian phone number.');
       return;
     }
+
+    setLoading(true);
     setError(null);
-    setOtpSent(true);
+
+    try {
+      const fullPhone = `+91${cleanPhone}`;
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        phone: fullPhone,
+        options: {
+          data: {
+            role: selectedRole || 'consumer',
+            full_name: name.trim() || undefined,
+          },
+        },
+      });
+
+      setLoading(false);
+
+      if (otpErr) {
+        setError(otpErr.message);
+        return;
+      }
+
+      setOtpSent(true);
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || 'Failed to dispatch verification SMS.');
+    }
   };
 
   const handlePhoneVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fullOtp = otpValues.join('');
-    if (fullOtp.length < 4) {
-      setError('Please enter the 4-digit verification code.');
+    if (loading) return;
+
+    const otp = otpValues.join('');
+    if (otp.length < 6) {
+      setError('Please enter the complete 6-digit verification code.');
       return;
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 450));
-    setLoading(false);
+    setError(null);
 
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const userObj: AuthUser = {
-      id: `usr-otp-${Date.now()}`,
-      name: name.trim() || (selectedRole === 'charger_owner' ? 'Go Charge Host' : 'EV Driver'),
-      phone: `+91 ${cleanPhone}`,
-      email: `${cleanPhone}@gocharge.in`,
-      role: selectedRole || 'consumer',
-      ownerType: selectedRole === 'charger_owner' ? ownerType : undefined,
-      businessName: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
-      city,
-      ownsCharger: selectedRole === 'charger_owner' ? ownsCharger : undefined,
-      isNewOwner: authMode === 'signup' && selectedRole === 'charger_owner',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const cleanPhone = `+91${phone.replace(/\D/g, '')}`;
+      const { data: authData, error: verifyErr } = await supabase.auth.verifyOtp({
+        phone: cleanPhone,
+        token: otp,
+        type: 'sms',
+      });
 
-    saveAndSucceed(userObj);
+      if (verifyErr || !authData.user) {
+        setLoading(false);
+        setError(verifyErr?.message || 'Invalid or expired verification code.');
+        return;
+      }
+
+      const profile = await fetchProfile(authData.user.id);
+      const perms = await getUserPermissions(authData.user.id);
+      const meta = authData.user.user_metadata || {};
+      const fullName = profile?.full_name || meta.full_name || name.trim() || 'EV Driver';
+
+      if (!profile) {
+        await upsertProfile({
+          id: authData.user.id,
+          email: authData.user.email || null,
+          full_name: fullName,
+          state: city,
+        });
+      }
+
+      const userObj: AuthUser = {
+        id: authData.user.id,
+        name: fullName,
+        email: authData.user.email || `${cleanPhone}@gocharge.in`,
+        phone: cleanPhone,
+        role: perms.role,
+        ownerType: selectedRole === 'charger_owner' ? ownerType : undefined,
+        businessName: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
+        city,
+        ownsCharger: selectedRole === 'charger_owner' ? ownsCharger : undefined,
+        isNewOwner: false,
+        avatarUrl: profile?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
+        createdAt: authData.user.created_at || new Date().toISOString(),
+      };
+
+      setLoading(false);
+      onSuccess(userObj);
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || 'Verification failed.');
+    }
   };
 
-  // Google Login Simulation Handler
+  // Google OAuth Handler with Supabase Auth
   const handleGoogleAuth = async () => {
+    if (loading) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setLoading(false);
+    setError(null);
+    try {
+      const { error: googleError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+          queryParams: { role: selectedRole || 'consumer' },
+        },
+      });
 
-    const googleUser: AuthUser = selectedRole === 'charger_owner'
-      ? {
-          id: `usr-google-owner-${Date.now()}`,
-          name: 'Vikramaditya Singhania (Google)',
-          email: 'vikram.singhania@gmail.com',
-          phone: '+91 98201 44520',
-          role: 'charger_owner',
-          ownerType: 'business',
-          businessName: 'Singhania Mobility Hubs',
-          city: 'New Delhi, Delhi NCR',
-          ownsCharger: true,
-          isNewOwner: false,
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
-          createdAt: new Date().toISOString()
-        }
-      : {
-          id: `usr-google-consumer-${Date.now()}`,
-          name: 'Rahul Sharma (Google)',
-          email: 'rahul.sharma@gmail.com',
-          phone: '+91 98765 43210',
-          role: 'consumer',
-          city: 'New Delhi',
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=80',
-          createdAt: new Date().toISOString()
-        };
-
-    saveAndSucceed(googleUser);
+      if (googleError) {
+        setError(googleError.message);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Google authentication failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Forgot Password Submit Handler
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  // Forgot Password Submit Handler with 60s cooldown
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotEmail || !forgotEmail.includes('@')) return;
-    setForgotMessage(`Password reset link sent to ${forgotEmail}. (Demo simulation: you can continue with any 6-character password).`);
+    if (loading || forgotCooldown > 0) return;
+
+    if (!forgotEmail || !forgotEmail.includes('@')) {
+      setError('Please provide a valid email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      setLoading(false);
+      if (resetErr) {
+        const lower = resetErr.message.toLowerCase();
+        if (lower.includes('rate limit') || lower.includes('over_email_send_rate_limit') || (resetErr as any).status === 429) {
+          setError('Email rate limit reached: Please wait a few minutes before requesting another password reset email.');
+          setForgotCooldown(60);
+        } else {
+          setError(resetErr.message);
+        }
+      } else {
+        setForgotCooldown(60);
+        setForgotMessage(`If an account is associated with ${forgotEmail.trim()}, password recovery instructions have been sent.`);
+      }
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.message || 'Failed to dispatch password recovery email.');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F7F2] dark:bg-[#071715] text-[#14201F] dark:text-[#E4EFEA] flex flex-col font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-[#F4F1E8] dark:bg-[#071715] flex flex-col justify-between text-[#14201F] dark:text-[#E4EFEA] transition-colors duration-300 relative overflow-hidden">
       
-      {/* Top Simple Header */}
-      <header className="w-full border-b border-[#D9DED5] dark:border-[#1E4844] bg-[#F4F1E8]/90 dark:bg-[#071715]/90 backdrop-blur-md px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      {/* Background Ambience */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#19C7B1]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#073B35]/20 dark:bg-[#19C7B1]/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Top Header */}
+      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between relative z-10">
         <button
-          type="button"
           onClick={onCancel}
-          className="flex items-center gap-2 group cursor-pointer"
+          className="flex items-center gap-2 text-xs font-bold text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white transition-colors cursor-pointer group"
         >
-          <div className="w-8 h-8 rounded-full bg-[#19C7B1] flex items-center justify-center text-white shadow-glow-teal-sm group-hover:rotate-12 transition-transform">
-            <Zap className="w-4 h-4 fill-white" />
-          </div>
-          <div className="text-left">
-            <span className="font-extrabold text-base tracking-tight text-[#123C3A] dark:text-white leading-none block">
-              Go Charge
-            </span>
-            <span className="text-[9px] font-bold text-[#19C7B1] tracking-wider uppercase">
-              Community EV Network
-            </span>
-          </div>
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Go Charge</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          {/* Theme switcher */}
+        <div className="flex items-center gap-3">
           <button
-            type="button"
             onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className="p-2 rounded-full bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white hover:border-[#19C7B1] transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white transition-all cursor-pointer shadow-sm"
           >
-            {isDark ? <Sun className="w-4 h-4 text-[#F59E0B]" /> : <Moon className="w-4 h-4 text-[#123C3A]" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-3.5 py-1.5 rounded-btn bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] text-xs font-bold text-[#123C3A] dark:text-white transition-all cursor-pointer"
-          >
-            Back to Platform
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
           </button>
         </div>
       </header>
 
-      {/* Main Body Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-4xl mx-auto">
-          
+      {/* Main Container */}
+      <main className="flex-1 flex items-center justify-center p-4 relative z-10 py-8">
+        <div className="w-full max-w-4xl">
+
           <AnimatePresence mode="wait">
+            {/* ======================================================== */}
+            {/* STEP 1: DUAL-ROLE ONBOARDING SELECTION                   */}
+            {/* ======================================================== */}
             {!selectedRole ? (
-              /* ======================================================== */
-              /* STEP 1: THE TWO ATTRACTIVE SELECTION CARDS                */
-              /* ======================================================== */
               <motion.div
-                key="role-selection"
+                key="role-select"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.22 }}
-                className="space-y-8 text-center"
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                className="space-y-8"
               >
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#19C7B1]/15 text-[#123C3A] dark:text-[#19C7B1] text-xs font-extrabold mb-3">
-                    <Sparkles className="w-3.5 h-3.5 text-[#19C7B1]" />
-                    <span>Dual Role Access · Select Your Account Type</span>
+                {/* Heading */}
+                <div className="text-center max-w-xl mx-auto space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#19C7B1]/10 text-[#073B35] dark:text-[#19C7B1] text-xs font-extrabold tracking-wide uppercase">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Supabase Secured Identity</span>
                   </div>
-                  <h1 className="text-2xl sm:text-4xl font-extrabold text-[#123C3A] dark:text-white tracking-tight">
-                    Welcome to Go Charge
+                  <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#123C3A] dark:text-white">
+                    Choose Your Go Charge Portal
                   </h1>
-                  <p className="text-xs sm:text-sm text-[#5E716E] dark:text-[#8FAFA9] max-w-md mx-auto mt-2">
-                    Whether you are charging your electric vehicle on the road or hosting charging points for passive revenue, Go Charge connects you.
+                  <p className="text-sm text-[#5E716E] dark:text-[#8FAFA9]">
+                    Select whether you want to discover EV charging stations or host and monetize your own charging points.
                   </p>
                 </div>
 
-                {/* THE TWO SELECTION CARDS */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-3xl mx-auto">
+                {/* 2 Big Choice Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                   
                   {/* CARD 1 – CONSUMER */}
                   <div
@@ -322,6 +581,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                       setSelectedRole('consumer');
                       setAuthMode('signin');
                       setError(null);
+                      setSuccessNotice(null);
                     }}
                     className="group relative p-6 sm:p-7 rounded-2xl bg-white dark:bg-[#0D2422] border-2 border-[#D9DED5] dark:border-[#1E4844] hover:border-[#19C7B1] dark:hover:border-[#19C7B1] shadow-card-subtle hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between cursor-pointer overflow-hidden"
                   >
@@ -336,10 +596,10 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                       {/* Heading */}
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <h2 className="text-xl font-extrabold text-[#123C3A] dark:text-white group-hover:text-[#19C7B1] transition-colors">
-                          Find a Charger
+                          Find & Charge
                         </h2>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E9EFE7] dark:bg-[#112D2B] text-[#123C3A] dark:text-[#19C7B1] uppercase tracking-wider">
-                          Consumer
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#19C7B1]/10 text-[#073B35] dark:text-[#19C7B1] uppercase tracking-wider">
+                          EV Driver
                         </span>
                       </div>
 
@@ -367,6 +627,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                       setSelectedRole('charger_owner');
                       setAuthMode('signin');
                       setError(null);
+                      setSuccessNotice(null);
                     }}
                     className="group relative p-6 sm:p-7 rounded-2xl bg-white dark:bg-[#0D2422] border-2 border-[#D9DED5] dark:border-[#1E4844] hover:border-[#123C3A] dark:hover:border-[#19C7B1] shadow-card-subtle hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between cursor-pointer overflow-hidden"
                   >
@@ -408,7 +669,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
 
                 </div>
 
-                {/* Sub links & Quick demo test triggers */}
+                {/* Sub links */}
                 <div className="pt-2 flex flex-col items-center justify-center gap-3">
                   <div className="flex items-center gap-2 text-xs text-[#5E716E] dark:text-[#8FAFA9]">
                     <span>Already familiar with the platform?</span>
@@ -420,76 +681,55 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                       }}
                       className="text-[#19C7B1] font-bold hover:underline cursor-pointer"
                     >
-                      Login directly
-                    </button>
-                  </div>
-
-                  {/* 1-Click Demo Login Shortcuts */}
-                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                    <span className="text-[11px] font-bold text-[#7A8C89] uppercase tracking-wider">
-                      Demo 1-Click:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickDemo('consumer')}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-100 transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Car className="w-3.5 h-3.5" />
-                      <span>Test as Consumer (Rahul)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickDemo('charger_owner')}
-                      className="px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300 text-xs font-bold hover:bg-teal-100 transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Test as Charger Owner (Vikram)</span>
+                      Sign In directly
                     </button>
                   </div>
                 </div>
+
               </motion.div>
             ) : (
               /* ======================================================== */
-              /* STEP 2: AUTHENTICATION FORM (CONSUMER OR OWNER)          */
+              /* STEP 2: SUPABASE AUTHENTICATION FORM                     */
               /* ======================================================== */
               <motion.div
                 key="auth-form"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.2 }}
-                className="max-w-lg mx-auto bg-white dark:bg-[#0D2422] rounded-3xl border border-[#D9DED5] dark:border-[#1E4844] shadow-2xl p-6 sm:p-8"
+                transition={{ duration: 0.24, ease: "easeOut" }}
+                className="max-w-md mx-auto bg-white dark:bg-[#0D2422] rounded-3xl border border-[#D9DED5] dark:border-[#1E4844] shadow-card-hover p-6 sm:p-8"
               >
-                {/* Back to Role Selection Breadcrumb */}
-                <div className="flex items-center justify-between pb-4 border-b border-[#D9DED5] dark:border-[#1E4844] mb-5">
+                
+                {/* Back to Role Selection */}
+                <div className="flex items-center justify-between mb-5">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedRole(null);
                       setError(null);
-                      setOtpSent(false);
+                      setSuccessNotice(null);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#19C7B1] transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 text-xs font-bold text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white transition-colors cursor-pointer"
                   >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Change Account Type</span>
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Switch Portal</span>
                   </button>
 
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider ${
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
                     selectedRole === 'charger_owner'
-                      ? 'bg-[#073B35]/10 dark:bg-[#112D2B] text-[#073B35] dark:text-[#19C7B1] border border-[#073B35]/20 dark:border-[#19C7B1]/30'
-                      : 'bg-[#19C7B1]/15 text-[#123C3A] dark:text-[#19C7B1] border border-[#19C7B1]/30'
+                      ? 'bg-[#073B35]/10 dark:bg-[#112D2B] text-[#073B35] dark:text-[#19C7B1]'
+                      : 'bg-[#19C7B1]/10 text-[#073B35] dark:text-[#19C7B1]'
                   }`}>
-                    {selectedRole === 'charger_owner' ? '⚡ Charger Owner' : '🚗 EV Consumer'}
+                    {selectedRole === 'charger_owner' ? 'Host Portal' : 'Driver Portal'}
                   </span>
                 </div>
 
-                {/* Heading & Sign In vs Create Account Toggle */}
-                <div className="space-y-3 mb-6">
+                {/* Portal Title & Tabs */}
+                <div className="mb-6 space-y-4">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#123C3A] dark:text-white tracking-tight">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#123C3A] dark:text-white">
                       {authMode === 'signin' 
-                        ? (selectedRole === 'charger_owner' ? 'Charger Owner Login' : 'Consumer Login')
+                        ? (selectedRole === 'charger_owner' ? 'Charger Owner Sign In' : 'Consumer Sign In')
                         : (selectedRole === 'charger_owner' ? 'Register as Charger Owner' : 'Create Consumer Account')}
                     </h2>
                     <p className="text-xs text-[#5E716E] dark:text-[#8FAFA9] mt-0.5">
@@ -503,9 +743,11 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                   <div className="grid grid-cols-2 p-1 bg-[#E9EFE7] dark:bg-[#081B19] rounded-xl border border-[#D9DED5] dark:border-[#1E4844] text-xs font-bold">
                     <button
                       type="button"
+                      disabled={loading}
                       onClick={() => {
                         setAuthMode('signin');
                         setError(null);
+                        setSuccessNotice(null);
                         setOtpSent(false);
                       }}
                       className={`py-2 rounded-lg transition-all cursor-pointer ${
@@ -518,9 +760,11 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                     </button>
                     <button
                       type="button"
+                      disabled={loading}
                       onClick={() => {
                         setAuthMode('signup');
                         setError(null);
+                        setSuccessNotice(null);
                         setOtpSent(false);
                       }}
                       className={`py-2 rounded-lg transition-all cursor-pointer ${
@@ -534,11 +778,94 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                   </div>
                 </div>
 
-                {/* Error Banner */}
+                {/* Success Banner */}
+                {successNotice && (
+                  <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                    <div>{successNotice}</div>
+                  </div>
+                )}
+
+                {/* Resend Confirmation Email Widget (visible when verification is pending or rate-limited) */}
+                {(pendingVerificationEmail || successNotice || (error && error.toLowerCase().includes('verification pending'))) && (
+                  <div className="mb-4 p-3.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-xs space-y-2.5">
+                    <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-bold">
+                      <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>Email Confirmation Required</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
+                      Didn't receive the email? Check your spam/junk folder or request another confirmation link below.
+                    </p>
+                    <div className="flex items-center justify-between pt-1 border-t border-amber-200/60 dark:border-amber-900/40">
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium truncate max-w-[180px]">
+                        {pendingVerificationEmail || email}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={resendLoading || resendCooldown > 0}
+                        onClick={handleResendConfirmation}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                          resendCooldown > 0 || resendLoading
+                            ? 'bg-amber-200/60 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 cursor-not-allowed opacity-80'
+                            : 'bg-amber-600 hover:bg-amber-700 text-white'
+                        }`}
+                      >
+                        {resendLoading ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Sending...</span>
+                          </>
+                        ) : resendCooldown > 0 ? (
+                          <>
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Resend in {resendCooldown}s</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Resend Email</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner with helpful options */}
                 {error && (
-                  <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-                    <span>{error}</span>
+                  <div className="mb-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs font-semibold space-y-2.5">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                      <span className="leading-relaxed">{error}</span>
+                    </div>
+
+                    {authMode === 'signin' && !error.toLowerCase().includes('verification pending') && (
+                      <div className="flex items-center gap-3 pt-1 border-t border-rose-200/60 dark:border-rose-900/60 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthMode('signup');
+                            setError(null);
+                          }}
+                          className="font-bold text-rose-900 dark:text-rose-300 underline hover:text-[#19C7B1] transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <UserPlus className="w-3 h-3" />
+                          <span>Create Account</span>
+                        </button>
+                        <span>•</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForgotPasswordOpen(true);
+                            setForgotEmail(email);
+                            setForgotMessage(null);
+                          }}
+                          className="font-bold text-rose-900 dark:text-rose-300 underline hover:text-[#19C7B1] transition-colors cursor-pointer"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -546,6 +873,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                 <div className="flex items-center justify-center gap-4 mb-4 text-xs font-bold border-b border-[#D9DED5] dark:border-[#1E4844] pb-2">
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => {
                       setAuthMethod('email');
                       setOtpSent(false);
@@ -563,6 +891,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
 
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => {
                       setAuthMethod('phone');
                       setError(null);
@@ -595,16 +924,17 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                           <input
                             type="text"
                             required
+                            disabled={loading}
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g. Rahul Sharma"
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors"
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors disabled:opacity-60"
                           />
                         </div>
                       </div>
                     )}
 
-                    {/* OWNER SPECIFIC REGISTRATION FIELDS (Section 6) */}
+                    {/* OWNER SPECIFIC REGISTRATION FIELDS */}
                     {authMode === 'signup' && selectedRole === 'charger_owner' && (
                       <div className="p-3.5 rounded-2xl bg-[#E9EFE7]/80 dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] space-y-3.5">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-[#123C3A] dark:text-[#19C7B1]">
@@ -620,6 +950,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                           <div className="grid grid-cols-2 gap-2 text-xs font-bold">
                             <button
                               type="button"
+                              disabled={loading}
                               onClick={() => setOwnerType('individual')}
                               className={`py-1.5 rounded-lg border transition-all cursor-pointer ${
                                 ownerType === 'individual'
@@ -631,6 +962,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                             </button>
                             <button
                               type="button"
+                              disabled={loading}
                               onClick={() => setOwnerType('business')}
                               className={`py-1.5 rounded-lg border transition-all cursor-pointer ${
                                 ownerType === 'business'
@@ -651,10 +983,12 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                             </label>
                             <input
                               type="text"
+                              required
+                              disabled={loading}
                               value={businessName}
                               onChange={(e) => setBusinessName(e.target.value)}
                               placeholder="e.g. Singhania EV Infrastructure LLP"
-                              className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-xs text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1]"
+                              className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-xs text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] disabled:opacity-60"
                             />
                           </div>
                         )}
@@ -668,38 +1002,12 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                             <MapPin className="w-3.5 h-3.5 text-[#7A8C89] absolute left-3 top-2.5 pointer-events-none" />
                             <input
                               type="text"
+                              disabled={loading}
                               value={city}
                               onChange={(e) => setCity(e.target.value)}
                               placeholder="e.g. New Delhi, Bengaluru, Mumbai"
-                              className="w-full pl-9 pr-3 py-2 rounded-lg bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-xs text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1]"
+                              className="w-full pl-9 pr-3 py-2 rounded-lg bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-xs text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] disabled:opacity-60"
                             />
-                          </div>
-                        </div>
-
-                        {/* Do you already own an EV charger */}
-                        <div className="flex items-center justify-between text-xs pt-1">
-                          <span className="font-semibold text-[#123C3A] dark:text-[#E4EFEA]">
-                            Do you already own an EV charger?
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setOwnsCharger(true)}
-                              className={`px-2.5 py-1 rounded-md text-xs font-bold cursor-pointer ${
-                                ownsCharger ? 'bg-[#123C3A] text-white' : 'bg-gray-100 text-gray-500'
-                              }`}
-                            >
-                              Yes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setOwnsCharger(false)}
-                              className={`px-2.5 py-1 rounded-md text-xs font-bold cursor-pointer ${
-                                !ownsCharger ? 'bg-[#123C3A] text-white' : 'bg-gray-100 text-gray-500'
-                              }`}
-                            >
-                              No (Planning)
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -715,10 +1023,11 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                         <input
                           type="email"
                           required
+                          disabled={loading}
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder={selectedRole === 'charger_owner' ? 'vikram@gocharge.in' : 'rahul@gocharge.in'}
-                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors"
+                          placeholder="name@example.com"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors disabled:opacity-60"
                         />
                       </div>
                     </div>
@@ -732,12 +1041,13 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                         {authMode === 'signin' && (
                           <button
                             type="button"
+                            disabled={loading}
                             onClick={() => {
                               setForgotPasswordOpen(true);
                               setForgotEmail(email);
                               setForgotMessage(null);
                             }}
-                            className="text-[11px] font-bold text-[#19C7B1] hover:underline cursor-pointer"
+                            className="text-[11px] font-bold text-[#19C7B1] hover:underline cursor-pointer disabled:opacity-50"
                           >
                             Forgot password?
                           </button>
@@ -748,14 +1058,16 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
+                          disabled={loading}
                           minLength={6}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors disabled:opacity-60"
                         />
                         <button
                           type="button"
+                          disabled={loading}
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3.5 top-3 text-[#7A8C89] hover:text-[#123C3A] dark:hover:text-white transition-colors cursor-pointer"
                         >
@@ -764,18 +1076,53 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                       </div>
                     </div>
 
+                    {/* Confirm Password for Sign Up */}
+                    {authMode === 'signup' && (
+                      <div>
+                        <label className="block text-xs font-bold text-[#123C3A] dark:text-[#CBDCD6] mb-1.5">
+                          Confirm Password *
+                        </label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-[#7A8C89] absolute left-3.5 top-3 pointer-events-none" />
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            required
+                            disabled={loading}
+                            minLength={6}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] transition-colors disabled:opacity-60"
+                          />
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3.5 top-3 text-[#7A8C89] hover:text-[#123C3A] dark:hover:text-white transition-colors cursor-pointer"
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={loading}
                       className={`w-full py-3 rounded-xl font-bold text-xs sm:text-sm shadow-glow-teal flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                        selectedRole === 'charger_owner'
+                        loading
+                          ? 'opacity-70 cursor-not-allowed bg-[#7A8C89]'
+                          : selectedRole === 'charger_owner'
                           ? 'bg-[#073B35] dark:bg-[#18C5B7] hover:bg-[#0A4E46] dark:hover:bg-[#15A896] text-white dark:text-[#071715]'
                           : 'bg-[#19C7B1] hover:bg-[#15A896] text-white'
                       }`}
                     >
                       {loading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>{authMode === 'signin' ? 'Authenticating...' : 'Registering Account...'}</span>
+                        </div>
                       ) : (
                         <>
                           <span>
@@ -791,7 +1138,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                 )}
 
                 {/* ======================================================== */}
-                {/* METHOD B: PHONE OTP FORM (INTEGRATION READINESS)          */}
+                {/* METHOD B: PHONE OTP FORM                                 */}
                 {/* ======================================================== */}
                 {authMethod === 'phone' && (
                   <div>
@@ -805,17 +1152,18 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                             <input
                               type="text"
                               required
+                              disabled={loading}
                               value={name}
                               onChange={(e) => setName(e.target.value)}
                               placeholder="e.g. Rahul Sharma"
-                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1]"
+                              className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] disabled:opacity-60"
                             />
                           </div>
                         )}
 
                         <div>
                           <label className="block text-xs font-bold text-[#123C3A] dark:text-[#CBDCD6] mb-1.5">
-                            Indian Mobile Number *
+                            Mobile Number *
                           </label>
                           <div className="flex items-center">
                             <span className="px-3.5 py-2.5 bg-[#E9EFE7] dark:bg-[#081B19] border border-r-0 border-[#D9DED5] dark:border-[#1E4844] rounded-l-xl text-xs font-bold text-[#5E716E] dark:text-[#8FAFA9]">
@@ -824,39 +1172,46 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                             <input
                               type="tel"
                               required
+                              disabled={loading}
                               maxLength={10}
                               value={phone}
                               onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                               placeholder="98765 43210"
-                              className="w-full px-3.5 py-2.5 rounded-r-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm font-bold text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1]"
+                              className="w-full px-3.5 py-2.5 rounded-r-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs sm:text-sm font-bold text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] disabled:opacity-60"
                             />
                           </div>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-[#19C7B1]/10 border border-[#19C7B1]/30 flex items-center gap-2 text-[11px] text-[#5E716E] dark:text-[#8FAFA9]">
-                          <ShieldCheck className="w-4 h-4 text-[#19C7B1] shrink-0" />
-                          <span>Phone OTP architecture is ready. Simulated demo code: any 4 numbers.</span>
-                        </div>
-
                         <button
                           type="submit"
-                          className="w-full py-3 rounded-xl bg-[#19C7B1] hover:bg-[#15A896] text-white text-xs sm:text-sm font-bold shadow-glow-teal flex items-center justify-center gap-2 cursor-pointer"
+                          disabled={loading}
+                          className="w-full py-3 rounded-xl bg-[#19C7B1] hover:bg-[#15A896] text-white text-xs sm:text-sm font-bold shadow-glow-teal flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                          <span>Get One-Time Password</span>
-                          <ArrowRight className="w-4 h-4" />
+                          {loading ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Sending Code...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <span>Send Verification Code</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </>
+                          )}
                         </button>
                       </form>
                     ) : (
                       <form onSubmit={handlePhoneVerifyOtp} className="space-y-4">
                         <p className="text-xs text-[#5E716E] dark:text-[#8FAFA9] text-center">
-                          Enter the 4-digit verification code sent to <strong className="text-[#123C3A] dark:text-white">+91 {phone}</strong>
+                          Enter the 6-digit code sent to <strong className="text-[#123C3A] dark:text-white">+91 {phone}</strong>
                         </p>
 
                         <div className="flex justify-center gap-2 my-2">
-                          {[0, 1, 2, 3].map((idx) => (
+                          {[0, 1, 2, 3, 4, 5].map((idx) => (
                             <input
                               key={idx}
                               type="text"
+                              disabled={loading}
                               maxLength={1}
                               value={otpValues[idx]}
                               onChange={(e) => {
@@ -864,13 +1219,13 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                                 const next = [...otpValues];
                                 next[idx] = val;
                                 setOtpValues(next);
-                                if (val && idx < 3) {
+                                if (val && idx < 5) {
                                   const nextInput = document.getElementById(`phone-otp-${idx + 1}`);
                                   nextInput?.focus();
                                 }
                               }}
                               id={`phone-otp-${idx}`}
-                              className="w-12 h-12 text-center text-lg font-bold rounded-xl bg-white dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white focus:border-[#19C7B1] outline-none"
+                              className="w-10 h-12 text-center text-base font-bold rounded-xl bg-white dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white focus:border-[#19C7B1] outline-none disabled:opacity-60"
                             />
                           ))}
                         </div>
@@ -878,7 +1233,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                         <button
                           type="submit"
                           disabled={loading}
-                          className="w-full py-3 rounded-xl bg-[#19C7B1] hover:bg-[#15A896] text-white text-xs sm:text-sm font-bold shadow-glow-teal flex items-center justify-center gap-2 cursor-pointer"
+                          className="w-full py-3 rounded-xl bg-[#19C7B1] hover:bg-[#15A896] text-white text-xs sm:text-sm font-bold shadow-glow-teal flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                           {loading ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -892,6 +1247,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
 
                         <button
                           type="button"
+                          disabled={loading}
                           onClick={() => setOtpSent(false)}
                           className="w-full text-center text-xs text-[#5E716E] dark:text-[#8FAFA9] hover:underline cursor-pointer"
                         >
@@ -912,12 +1268,12 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                   </div>
                 </div>
 
-                {/* Google Sign In Integration Readiness */}
+                {/* Google Sign In */}
                 <button
                   type="button"
                   onClick={handleGoogleAuth}
                   disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] hover:bg-[#E9EFE7] dark:hover:bg-[#112D2B] border border-[#D9DED5] dark:border-[#1E4844] text-xs font-bold text-[#14201F] dark:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] hover:bg-[#E9EFE7] dark:hover:bg-[#112D2B] border border-[#D9DED5] dark:border-[#1E4844] text-xs font-bold text-[#14201F] dark:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-60"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -925,20 +1281,8 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                   </svg>
-                  <span>Continue with Google (Simulated OAuth)</span>
+                  <span>Continue with Google</span>
                 </button>
-
-                {/* Quick 1-Click Demo Fill for current role */}
-                <div className="pt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo(selectedRole)}
-                    className="text-xs font-bold text-[#19C7B1] hover:underline cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Quick Fill & Login as Demo {selectedRole === 'charger_owner' ? 'Owner' : 'Consumer'}</span>
-                  </button>
-                </div>
 
               </motion.div>
             )}
@@ -955,7 +1299,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
               Reset Your Password
             </h3>
             <p className="text-xs text-[#5E716E] dark:text-[#8FAFA9]">
-              Enter your registered email address and we will dispatch a demo password recovery link.
+              Enter your registered email address and Supabase Auth will send you a password recovery link.
             </p>
 
             {forgotMessage ? (
@@ -967,16 +1311,27 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                 <input
                   type="email"
                   required
+                  disabled={loading || forgotCooldown > 0}
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="name@gocharge.in"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1]"
+                  placeholder="name@example.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F7F2] dark:bg-[#081B19] border border-[#D9DED5] dark:border-[#1E4844] text-xs text-[#14201F] dark:text-white outline-none focus:border-[#19C7B1] disabled:opacity-60"
                 />
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-[#19C7B1] text-white text-xs font-bold shadow cursor-pointer"
+                  disabled={loading || forgotCooldown > 0}
+                  className="w-full py-2.5 rounded-xl bg-[#19C7B1] text-white text-xs font-bold shadow cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                 >
-                  Send Recovery Link
+                  {loading ? (
+                    'Sending...'
+                  ) : forgotCooldown > 0 ? (
+                    <>
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Request available in {forgotCooldown}s</span>
+                    </>
+                  ) : (
+                    'Send Recovery Link'
+                  )}
                 </button>
               </form>
             )}
