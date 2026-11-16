@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Zap, LayoutDashboard, BatteryCharging, CalendarCheck, 
   TrendingUp, User, PlusCircle, ArrowLeft, ShieldCheck, 
@@ -93,6 +93,18 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Main scrollable content reference
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // Prevent document-level scrolling while Host Dashboard is active
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   const handleMarkAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
@@ -120,6 +132,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       setIsAddModalOpen(true);
     } else {
       setActiveTab(tab);
+      mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }
     setMobileSidebarOpen(false);
   };
@@ -148,15 +161,15 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F7F2] dark:bg-[#071715] flex flex-col font-sans selection:bg-[#18C5B7]/30 text-gray-900 dark:text-[#E4EFEA] transition-colors duration-300">
+    <div className="host-dashboard-shell h-[100dvh] w-full overflow-hidden flex flex-col font-sans selection:bg-[#18C5B7]/30 text-gray-900 dark:text-[#E4EFEA] bg-[#F8F7F2] dark:bg-[#071715] transition-colors duration-300">
       
-      <div className="flex-1 flex w-full">
+      <div className="flex-1 flex w-full h-[100dvh] overflow-hidden">
         
         {/* ======================================================== */}
         {/* 1. LEFT SIDEBAR (DEEP FOREST GREEN #073B35) */}
         {/* Desktop Fixed Sidebar */}
         {/* ======================================================== */}
-        <aside className="hidden lg:flex flex-col w-64 bg-[#073B35] dark:bg-[#041D1A] text-white flex-shrink-0 min-h-screen border-r border-[#094740] dark:border-[#0E3531] shadow-xl justify-between p-5 sticky top-0 h-screen overflow-y-auto transition-colors">
+        <aside className="host-sidebar hidden lg:flex flex-col w-64 bg-[#073B35] dark:bg-[#041D1A] text-white flex-shrink-0 h-[100dvh] border-r border-[#094740] dark:border-[#0E3531] shadow-xl justify-between p-5 sticky top-0 overflow-y-auto overflow-x-hidden overscroll-y-contain transition-colors">
           
           <div className="space-y-6">
             
@@ -359,10 +372,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         {/* 2. MAIN CONTENT WRAPPER */}
         {/* Header + Body on Cream / Dark Background */}
         {/* ======================================================== */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div ref={mainContentRef} className="host-main-content flex-1 min-w-0 h-[100dvh] flex flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain">
           
           {/* Top SaaS Header Bar */}
-          <header className="sticky top-0 z-30 bg-[#F8F7F2]/90 dark:bg-[#071715]/95 backdrop-blur-md border-b border-gray-200/60 dark:border-[#163835] px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 transition-colors">
+          <header className="sticky top-0 z-30 flex-shrink-0 bg-[#F8F7F2]/90 dark:bg-[#071715]/95 backdrop-blur-md border-b border-gray-200/60 dark:border-[#163835] px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 transition-colors">
             
             {/* Left: Mobile hamburger + Heading */}
             <div className="flex items-center gap-3">

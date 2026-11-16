@@ -98,13 +98,28 @@ export function useHostMarketplace() {
         const session = (await supabase.auth.getSession()).data.session;
         if (!session?.user?.id) return;
 
-        const { data, error } = await supabase
+        // Fetch host's authorized organizations
+        const { data: orgMemb } = await supabase
+          .from('organization_memberships')
+          .select('organization_id')
+          .eq('user_id', session.user.id);
+
+        const orgIds = orgMemb?.map((m: any) => m.organization_id).filter(Boolean) || [];
+
+        let query = supabase
           .from('stations')
           .select(`
-            id, name, description, address_line_1, city, postal_code, is_public, created_at,
+            id, name, description, address_line_1, city, postal_code, is_public, created_at, organization_id,
             connectors ( id, connector_standard, max_power_kw )
-          `)
-          .eq('created_by', session.user.id);
+          `);
+
+        if (orgIds.length > 0) {
+          query = query.or(`created_by.eq.${session.user.id},organization_id.in.(${orgIds.join(',')})`);
+        } else {
+          query = query.eq('created_by', session.user.id);
+        }
+
+        const { data, error } = await query;
 
         if (isMounted && data && data.length > 0) {
           const mappedChargers: HostCharger[] = data.map((st) => {

@@ -277,8 +277,95 @@ export async function fetchStations(): Promise<Station[]> {
 }
 
 /**
+ * Verify host authorization using verified Supabase session and database organization memberships.
+ * SECURITY: Prevents consumer bypasses, owner spoofing, and privilege escalation.
+ */
+export async function verifyHostAuthorization(userId: string): Promise<{
+  authorized: boolean;
+  organizationId?: string;
+  role?: string;
+  error?: string;
+}> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user || session.user.id !== userId) {
+      return { authorized: false, error: 'Unauthorized: Valid Supabase session matching user identity is required.' };
+    }
+
+    // 1. Query organization_memberships for verified host roles
+    const { data: memberships } = await supabase
+      .from('organization_memberships')
+      .select('id, organization_id, role')
+      .eq('user_id', userId);
+
+    if (memberships && memberships.length > 0) {
+      return {
+        authorized: true,
+        organizationId: memberships[0].organization_id,
+        role: memberships[0].role || 'owner',
+      };
+    }
+
+    // 2. Query organizations where user is creator/owner
+    const { data: orgs } = await supabase
+      .from('organizations')
+      .select('id, display_name')
+      .eq('created_by', userId)
+      .limit(1);
+
+    if (orgs && orgs.length > 0) {
+      const orgId = orgs[0].id;
+      try {
+        await supabase.from('organization_memberships').insert({
+          organization_id: orgId,
+          user_id: userId,
+          role: 'owner',
+        });
+      } catch {
+        // Continue if already present or restricted
+      }
+
+      return {
+        authorized: true,
+        organizationId: orgId,
+        role: 'owner',
+      };
+    }
+
+    // 3. Check verified metadata role for registered charger owners
+    const metaRole = session.user.user_metadata?.role;
+    if (metaRole === 'charger_owner') {
+      const bName =
+        session.user.user_metadata?.business_name ||
+        session.user.user_metadata?.businessName ||
+        `${session.user.user_metadata?.full_name || 'Host'}'s EV Network`;
+
+      const orgRes = await createHostOrganization(bName);
+      return {
+        authorized: true,
+        organizationId: orgRes.organizationId,
+        role: 'owner',
+      };
+    }
+
+    // Explicitly reject ordinary consumers and unauthorized callers
+    return {
+      authorized: false,
+      error: 'Forbidden: Station creation and host management are restricted exclusively to authorized Host accounts.',
+    };
+  } catch (err: any) {
+    return { authorized: false, error: err.message || 'Authorization check failed.' };
+  }
+}
+
+/**
  * Create a new station.
- * SECURITY: Automatically extracts session.user.id for created_by to prevent owner spoofing.
+ * SECURITY:
+ * 1. Requires active authenticated Supabase session.
+ * 2. Enforces host authorization check via organization_memberships.
+ * 3. Extracts session.user.id for created_by to prevent owner spoofing.
+ * 4. Associates station with host's authorized organization_id.
+ * 5. Strictly rejects ordinary consumers with 403 Forbidden.
  */
 export async function createStation(
   stationData: {
@@ -298,6 +385,15 @@ export async function createStation(
       return { success: false, error: 'Unauthorized: Active host session required.' };
     }
 
+    // Host Authorization check
+    const authResult = await verifyHostAuthorization(session.user.id);
+    if (!authResult.authorized) {
+      return {
+        success: false,
+        error: authResult.error || 'Forbidden: Station creation is restricted exclusively to authorized Host accounts.',
+      };
+    }
+
     const { data: newStation, error: stationErr } = await supabase
       .from('stations')
       .insert({
@@ -308,6 +404,7 @@ export async function createStation(
         postal_code: stationData.pincode || null,
         is_public: true,
         created_by: session.user.id,
+        organization_id: authResult.organizationId || null,
         amenities: stationData.amenities || ['24/7 Access', 'Security'],
       })
       .select('id')

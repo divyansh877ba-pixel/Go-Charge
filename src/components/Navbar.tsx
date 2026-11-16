@@ -15,7 +15,7 @@ interface NavbarProps {
   onSearchChange: (query: string) => void;
   activeView: AppView;
   setActiveView: (view: AppView) => void;
-  onOpenListCharger: () => void;
+  onOpenListCharger?: () => void;
   onOpenFilterModal: () => void;
   onLocateUser: () => void;
   totalStations: number;
@@ -205,15 +205,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>My Dashboard</span>
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={onOpenListCharger}
-              className="px-3 py-1.5 rounded-pill text-[#123C3A] dark:text-[#18C5B7] hover:text-[#18C5B7] transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <PlusCircle className="w-3.5 h-3.5 text-[#18C5B7]" />
-              <span>{t.listYourCharger}</span>
-            </button>
 
             <button
               type="button"
@@ -430,21 +421,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenListCharger();
-                }}
-                className="w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between bg-[#18C5B7]/15 text-[#18C5B7] border border-[#18C5B7]/30 transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <PlusCircle className="w-4 h-4" />
-                  {t.listYourCharger}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
 
               <button
                 type="button"

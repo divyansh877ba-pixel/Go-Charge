@@ -15,7 +15,7 @@ import { Language, TRANSLATIONS } from '../../data/translations';
 
 interface LandingPageProps {
   onGoToMap: () => void;
-  onOpenListCharger: () => void;
+  onOpenListCharger?: () => void;
   onOpenHostDashboard?: () => void;
   onNavigateToAbout?: () => void;
   selectedVehicle: VehicleModel | null;
@@ -129,11 +129,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-1 text-xs text-[#5E716E] dark:text-[#8FAFA9]">
                 <button
                   type="button"
-                  onClick={onOpenListCharger}
+                  onClick={onOpenHostDashboard}
                   className="font-bold text-[#19C7B1] hover:underline flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Have a home or commercial charger?</span>
-                  <strong className="underline">List it on Go Charge →</strong>
+                  <strong className="underline">Host Portal →</strong>
                 </button>
               </div>
 
@@ -368,23 +368,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <div className="pt-3 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={onOpenListCharger}
-                className="px-6 py-3 rounded-xl bg-[#19C7B1] hover:bg-[#15A896] text-white font-bold text-xs sm:text-sm shadow-glow-teal flex items-center gap-2 cursor-pointer transition-all"
-              >
-                <span>List Your Charger (9 Easy Steps)</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
               {onOpenHostDashboard && (
                 <button
                   type="button"
                   onClick={onOpenHostDashboard}
-                  className="px-5 py-3 rounded-xl bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] hover:border-[#19C7B1] text-[#123C3A] dark:text-white font-bold text-xs sm:text-sm shadow-sm flex items-center gap-2 cursor-pointer transition-all"
+                  className="px-6 py-3 rounded-xl bg-[#19C7B1] hover:bg-[#15A896] text-white font-bold text-xs sm:text-sm shadow-glow-teal flex items-center gap-2 cursor-pointer transition-all"
                 >
-                  <span>Open Host Dashboard</span>
-                  <ArrowRight className="w-4 h-4 text-[#19C7B1]" />
+                  <span>Go-Charge Host Portal</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -455,9 +446,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex flex-wrap gap-5 text-xs font-semibold text-[#5E716E] dark:text-[#88ABA6]">
             <button onClick={onGoToMap} className="hover:text-[#19C7B1] transition-colors">
               Find Chargers
-            </button>
-            <button onClick={onOpenListCharger} className="hover:text-[#19C7B1] transition-colors">
-              List Your Charger
             </button>
             {onOpenHostDashboard && (
               <button onClick={onOpenHostDashboard} className="hover:text-[#19C7B1] transition-colors">

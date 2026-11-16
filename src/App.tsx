@@ -17,7 +17,6 @@ import { UndoToast } from './components/UI/UndoToast';
 import { useFavorites } from './hooks/useFavorites';
 import { useHostMarketplace } from './hooks/useHostMarketplace';
 import { OwnerDashboard } from './components/HostDashboard/OwnerDashboard';
-import { ChargerRegistrationModal } from './components/HostDashboard/ChargerRegistrationModal';
 import { VehicleSelectorModal } from './components/VehicleSelector/VehicleSelectorModal';
 import { TwoWayLoginPage } from './components/Auth/TwoWayLoginPage';
 import { ConsumerDashboard } from './components/ConsumerDashboard/ConsumerDashboard';
@@ -133,7 +132,6 @@ export function App() {
 
   // Modals state
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
-  const [isListChargerOpen, setIsListChargerOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [directionsStation, setDirectionsStation] = useState<Station | null>(null);
   const [chargingSessionData, setChargingSessionData] = useState<{
@@ -279,11 +277,18 @@ export function App() {
     });
   };
 
-  // Enforce Dashboard Route Protection for unauthenticated visitors
+  // Enforce Dashboard Route Protection for unauthenticated visitors and role mismatches
   useEffect(() => {
     if (authLoading) return;
     if (!authUser && (activeView === 'owner-dashboard' || activeView === 'consumer-dashboard')) {
       handleSetActiveView('login', '/login');
+    } else if (authUser && activeView === 'owner-dashboard' && authUser.role === 'consumer') {
+      // Consumers cannot access owner dashboard; redirect to consumer dashboard and show RoleGuard
+      setRoleGuardMismatch({ requiredRole: 'charger_owner' });
+      handleSetActiveView('consumer-dashboard', '/consumer/dashboard');
+    } else if (authUser && activeView === 'consumer-dashboard' && authUser.role === 'charger_owner') {
+      setRoleGuardMismatch({ requiredRole: 'consumer' });
+      handleSetActiveView('owner-dashboard', '/owner-dashboard');
     }
   }, [authLoading, authUser, activeView]);
 
@@ -395,8 +400,6 @@ export function App() {
           setDirectionsStation(null);
         } else if (isVehicleModalOpen) {
           setIsVehicleModalOpen(false);
-        } else if (isListChargerOpen) {
-          setIsListChargerOpen(false);
         } else if (isFilterModalOpen) {
           setIsFilterModalOpen(false);
         } else if (detailStation) {
@@ -435,7 +438,6 @@ export function App() {
     chargingSessionData,
     directionsStation,
     isVehicleModalOpen,
-    isListChargerOpen,
     isFilterModalOpen,
     detailStation,
     activeView,
@@ -564,14 +566,6 @@ export function App() {
     setSelectedStation(newStation);
   };
 
-  const handleHostChargerSubmit = (data: any) => {
-    const newHostCharger = handleAddHostCharger(data);
-    const newStation = convertToStation(newHostCharger);
-    setStations((prev) => [newStation, ...prev]);
-    setSelectedStation(newStation);
-    setIsListChargerOpen(false);
-  };
-
   // Sync Host Chargers to Customer Discovery Stations
   useEffect(() => {
     if (hostChargers && hostChargers.length > 0) {
@@ -594,7 +588,9 @@ export function App() {
   const currentViewKey = detailStation ? `detail-${detailStation.id}` : activeView;
 
   return (
-    <div className="relative min-h-screen bg-[#F4F1E8] dark:bg-[#071715] text-[#14201F] dark:text-[#E4EFEA] font-sans overflow-x-hidden transition-colors duration-300">
+    <div className={`relative min-h-screen bg-[#F4F1E8] dark:bg-[#071715] text-[#14201F] dark:text-[#E4EFEA] font-sans transition-colors duration-300 ${
+      activeView === 'owner-dashboard' && authUser?.role === 'charger_owner' ? 'h-[100dvh] overflow-hidden' : 'overflow-x-hidden'
+    }`}>
 
       {/* Sticky Top Navbar (Interactive & elevated above map/controls) */}
       {!detailStation && activeView !== 'owner-dashboard' && activeView !== 'consumer-dashboard' && activeView !== 'login' && (
@@ -618,7 +614,6 @@ export function App() {
           }}
           activeView={activeView}
           setActiveView={handleSetActiveView}
-          onOpenListCharger={() => setIsListChargerOpen(true)}
           onOpenFilterModal={() => setIsFilterModalOpen(true)}
           onLocateUser={handleLocateUser}
           totalStations={stations.length}
@@ -716,6 +711,7 @@ export function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.24, ease: "easeOut" }}
+            className={authUser && authUser.role === 'charger_owner' ? "h-[100dvh] w-full overflow-hidden" : ""}
           >
             {authUser && authUser.role === 'charger_owner' ? (
               <OwnerDashboard
@@ -753,7 +749,6 @@ export function App() {
             <AboutUsPage
               onGoToHome={() => handleSetActiveView('home')}
               onGoToMap={() => handleSetActiveView('map')}
-              onOpenListCharger={() => setIsListChargerOpen(true)}
               onOpenHostDashboard={() => handleSetActiveView('owner-dashboard')}
               lang={lang}
             />
@@ -769,7 +764,6 @@ export function App() {
             <div className="pt-16 sm:pt-20">
               <LandingPage
                 onGoToMap={() => handleSetActiveView('map')}
-                onOpenListCharger={() => setIsListChargerOpen(true)}
                 onOpenHostDashboard={() => handleSetActiveView('owner-dashboard')}
                 onNavigateToAbout={() => handleSetActiveView('about')}
                 selectedVehicle={selectedVehicle}
@@ -908,13 +902,6 @@ export function App() {
           }}
         />
       )}
-
-      {/* Multi-Step Charger Registration Modal (5 Steps) */}
-      <ChargerRegistrationModal
-        isOpen={isListChargerOpen}
-        onClose={() => setIsListChargerOpen(false)}
-        onSubmit={handleHostChargerSubmit}
-      />
 
       {/* Filter Modal */}
       <FilterModal

@@ -7,7 +7,7 @@ import { Language } from '../../data/translations';
 interface AboutUsPageProps {
   onGoToHome: () => void;
   onGoToMap: () => void;
-  onOpenListCharger: () => void;
+  onOpenListCharger?: () => void;
   onOpenHostDashboard?: () => void;
   lang?: Language;
 }
@@ -248,12 +248,14 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
               <span>Explore Chargers</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-            <button
-              onClick={onOpenListCharger}
-              className="px-6 py-3 rounded-full bg-transparent hover:bg-white/10 text-white font-semibold text-xs sm:text-sm border border-white/30 transition-all cursor-pointer"
-            >
-              <span>Become a Charger Partner</span>
-            </button>
+            {onOpenHostDashboard && (
+              <button
+                onClick={onOpenHostDashboard}
+                className="px-6 py-3 rounded-full bg-transparent hover:bg-white/10 text-white font-semibold text-xs sm:text-sm border border-white/30 transition-all cursor-pointer"
+              >
+                <span>Host Portal</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -281,9 +283,6 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
             </button>
             <button className="text-[#E5A93C] font-semibold cursor-default">
               About Us
-            </button>
-            <button onClick={onOpenListCharger} className="hover:text-white transition-colors cursor-pointer">
-              Become a Partner
             </button>
             {onOpenHostDashboard && (
               <button onClick={onOpenHostDashboard} className="hover:text-white transition-colors cursor-pointer">
