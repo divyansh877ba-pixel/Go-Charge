@@ -485,13 +485,29 @@ export function getModelsByBrand(brand: string): VehicleModel[] {
   return INDIAN_EV_DATABASE.filter(v => v.brand.toLowerCase() === brand.toLowerCase());
 }
 
-export function isStationCompatibleWithVehicle(stationConnectors: string[], vehicle: VehicleModel): boolean {
+export function isStationCompatibleWithVehicle(
+  stationOrConnectors: string[] | { primaryConnectors?: string[]; connectors?: Array<{ type: string }> },
+  vehicle: VehicleModel
+): boolean {
   if (!vehicle) return true;
-  // Check if any of the station's connectors match the vehicle's supported connectors
+  if (!stationOrConnectors) return false;
+
+  let connectorsList: string[] = [];
+  if (Array.isArray(stationOrConnectors)) {
+    connectorsList = stationOrConnectors;
+  } else if (stationOrConnectors.primaryConnectors && Array.isArray(stationOrConnectors.primaryConnectors)) {
+    connectorsList = stationOrConnectors.primaryConnectors;
+  } else if (stationOrConnectors.connectors && Array.isArray(stationOrConnectors.connectors)) {
+    connectorsList = stationOrConnectors.connectors.map(c => c.type);
+  }
+
+  if (connectorsList.length === 0) return false;
+
   return vehicle.connectors.some(vc => {
-    return stationConnectors.some(sc => {
-      const s = sc.toLowerCase().trim();
-      const v = vc.toLowerCase().trim();
+    return connectorsList.some(sc => {
+      if (!sc) return false;
+      const s = String(sc).toLowerCase().trim();
+      const v = String(vc).toLowerCase().trim();
       if (s === v) return true;
       if (v === 'ccs2' && (s.includes('ccs') || s.includes('ccs2'))) return true;
       if (v === 'type-2' && (s.includes('type 2') || s.includes('type-2') || s.includes('type2'))) return true;

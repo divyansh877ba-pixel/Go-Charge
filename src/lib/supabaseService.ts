@@ -87,59 +87,104 @@ export async function upsertProfile(profile: Partial<DbProfile> & { id: string }
   }
 }
 
-/**
- * Retrieve verified application permissions and organization membership for an authenticated user.
- * SECURITY: Derives permissions strictly from actual database records (organizations, stations).
- */
-export async function getUserPermissions(userId: string): Promise<{
+export interface UserPermissions {
   role: 'consumer' | 'charger_owner';
   isHost: boolean;
+  isConsumer: boolean;
   hasStations: boolean;
   hasOrganization: boolean;
   organizationName?: string;
-}> {
+  organizationId?: string;
+  organizationRole?: string;
+}
+
+/**
+ * Retrieve verified application permissions and organization membership for an authenticated user.
+ * SECURITY: Derives permissions strictly from actual database records (organization_memberships, stations).
+ * Never grants host privileges to unverified consumers.
+ */
+export async function getUserPermissions(userId: string): Promise<UserPermissions> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
       return {
         role: 'consumer',
         isHost: false,
+        isConsumer: false,
         hasStations: false,
         hasOrganization: false,
       };
     }
 
-    // 1. Check if user has registered organizations
-    const { data: orgs } = await supabase
-      .from('organizations')
-      .select('id, display_name')
-      .eq('created_by', userId)
-      .limit(1);
+    // 1. Query public.organization_memberships table for active host membership
+    let hasHostMembership = false;
+    let organizationId: string | undefined;
+    let organizationRole: string | undefined;
 
-    // 2. Check if user has registered stations
-    const { data: stns } = await supabase
-      .from('stations')
-      .select('id')
-      .eq('created_by', userId)
-      .limit(1);
+    try {
+      const { data: memberships, error: memErr } = await supabase
+        .from('organization_memberships')
+        .select('id, organization_id, role, state')
+        .eq('user_id', userId)
+        .eq('state', 'active');
 
-    const hasOrg = Boolean(orgs && orgs.length > 0);
-    const hasStations = Boolean(stns && stns.length > 0);
-    const metadataRole = session.user.user_metadata?.role;
-    const isHost = hasOrg || hasStations || metadataRole === 'charger_owner';
+      if (!memErr && memberships && memberships.length > 0) {
+        const hostRoles = ['owner', 'admin', 'host', 'charger_owner', 'manager'];
+        const activeHost = memberships.find((m: any) =>
+          hostRoles.includes((m.role || '').toLowerCase())
+        );
+        if (activeHost) {
+          hasHostMembership = true;
+          organizationId = activeHost.organization_id;
+          organizationRole = activeHost.role;
+        }
+      }
+    } catch (e) {
+      console.warn('organization_memberships query notice:', e);
+    }
+
+    // 2. Query public.stations registered under user's authorized organization
+    let hasStations = false;
+    if (organizationId) {
+      try {
+        const { data: stns, error: stnErr } = await supabase
+          .from('stations')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .limit(1);
+        hasStations = Boolean(!stnErr && stns && stns.length > 0);
+      } catch {
+        hasStations = false;
+      }
+    }
+
+    // 3. User metadata validation: only recognized if authenticated user explicitly registered as charger_owner with ownsCharger
+    const meta = session.user.user_metadata || {};
+    const metadataIsHost = meta.role === 'charger_owner' && (meta.ownsCharger === true || meta.owner_type === 'business');
+
+    const isHost = Boolean(hasHostMembership || hasStations || metadataIsHost);
+    // All authenticated EV drivers are valid consumers
+    const isConsumer = true;
+
+    // Primary role default: 'charger_owner' if verified host, otherwise strictly 'consumer'
+    const role: 'consumer' | 'charger_owner' = isHost ? 'charger_owner' : 'consumer';
 
     return {
-      role: isHost ? 'charger_owner' : 'consumer',
+      role,
       isHost,
+      isConsumer,
       hasStations,
-      hasOrganization: hasOrg,
-      organizationName: orgs?.[0]?.display_name,
+      hasOrganization: hasHostMembership,
+      organizationName: meta.business_name || meta.businessName || (hasHostMembership ? 'Go Charge Host Network' : undefined),
+      organizationId,
+      organizationRole,
     };
   } catch (err) {
     console.warn('getUserPermissions error:', err);
     return {
       role: 'consumer',
       isHost: false,
+      isConsumer: true,
       hasStations: false,
       hasOrganization: false,
     };
@@ -193,6 +238,7 @@ export async function fetchStations(): Promise<Station[]> {
       .from('stations')
       .select(`
         id,
+        organization_id,
         name,
         description,
         address_line_1,
@@ -201,9 +247,11 @@ export async function fetchStations(): Promise<Station[]> {
         city,
         postal_code,
         amenities,
+        location,
+        opening_hours,
         is_public,
-        created_by,
         created_at,
+        updated_at,
         connectors (
           id,
           station_id,
@@ -214,6 +262,7 @@ export async function fetchStations(): Promise<Station[]> {
       `);
 
     if (error || !data || data.length === 0) {
+      if (error) console.warn('Supabase fetchStations error:', error.message);
       return [];
     }
 

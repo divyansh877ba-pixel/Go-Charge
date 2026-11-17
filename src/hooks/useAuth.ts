@@ -10,6 +10,11 @@ export interface AuthUser {
   email: string;
   phone: string;
   role: UserRole;
+  isHost: boolean;
+  isConsumer: boolean;
+  canSwitchRoles: boolean;
+  organizationId?: string;
+  organizationRole?: string;
   avatarUrl?: string;
   // Specific to Charger Owners
   ownerType?: 'individual' | 'business';
@@ -59,7 +64,20 @@ export function useAuth() {
 
     // Verify application permissions and organization membership directly from database
     const perms = await getUserPermissions(sessionUser.id);
-    const role: UserRole = perms.role;
+
+    // Determine context-appropriate active role:
+    // If user lacks host privileges, role is ALWAYS strictly 'consumer'.
+    // If user is authorized host, maintain 'consumer' if currently on consumer view/route, or 'charger_owner' if on host route.
+    let activeRole: UserRole = perms.isHost ? 'charger_owner' : 'consumer';
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('/consumer') || hash.includes('#consumer-dashboard')) {
+        activeRole = 'consumer';
+      } else if (path.includes('/owner-dashboard') || hash.includes('#owner-dashboard')) {
+        activeRole = perms.isHost ? 'charger_owner' : 'consumer';
+      }
+    }
 
     // If profile didn't exist in Supabase profiles table, safely create it now
     if (!existingProfile) {
@@ -77,7 +95,12 @@ export function useAuth() {
       name: fullName,
       email: sessionUser.email || '',
       phone: sessionUser.phone || meta.phone || '+91 98765 43210',
-      role,
+      role: activeRole,
+      isHost: perms.isHost,
+      isConsumer: true,
+      canSwitchRoles: perms.isHost,
+      organizationId: perms.organizationId,
+      organizationRole: perms.organizationRole,
       ownerType: meta.owner_type || meta.ownerType || 'individual',
       businessName: perms.organizationName || meta.business_name || meta.businessName,
       city: state,
@@ -373,6 +396,21 @@ export function useAuth() {
     }
   }, []);
 
+  // Role switching for authorized dual-role users
+  const switchRole = useCallback((newRole: UserRole) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      if (newRole === 'charger_owner' && !prev.isHost) {
+        console.warn('Unauthorized role switch attempt: User lacks verified host permissions.');
+        return prev;
+      }
+      return {
+        ...prev,
+        role: newRole,
+      };
+    });
+  }, []);
+
   return {
     user,
     setUser,
@@ -385,5 +423,6 @@ export function useAuth() {
     resendVerificationEmail,
     logout,
     resetPassword,
+    switchRole,
   };
 }

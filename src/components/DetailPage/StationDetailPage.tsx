@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Station, Connector } from '../../types';
 import { 
   ArrowLeft, MapPin, Star, Zap, IndianRupee, Clock, 
@@ -92,6 +93,26 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
     verifiedElectrical: true
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.07,
+        delayChildren: 0.04,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
     <div className="relative min-h-screen bg-[#F4F1E8] dark:bg-[#071715] pb-28 text-[#14201F] dark:text-[#E4EFEA] transition-colors">
       
@@ -135,10 +156,15 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6"
+      >
         
         {/* HERO SECTION */}
-        <div className="p-6 rounded-card bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#183E3A] shadow-card-subtle relative overflow-hidden">
+        <motion.div variants={itemVariants} className="p-6 rounded-card bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#183E3A] shadow-card-subtle relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-[#19C7B1]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -194,7 +220,7 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
               </span>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* VEHICLE COMPATIBILITY ALERT */}
         {selectedVehicle && (
@@ -465,10 +491,15 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
           rating={station.rating}
         />
 
-      </div>
+      </motion.div>
 
       {/* STICKY BOTTOM BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#F4F1E8]/95 dark:bg-[#071715]/95 backdrop-blur-xl border-t border-[#D9DED5] dark:border-[#183E3A] px-4 sm:px-8 py-3.5 pb-safe shadow-card-hover">
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.28, delay: 0.1 }}
+        className="fixed bottom-0 left-0 right-0 z-40 bg-[#F4F1E8]/95 dark:bg-[#071715]/95 backdrop-blur-xl border-t border-[#D9DED5] dark:border-[#183E3A] px-4 sm:px-8 py-3.5 pb-safe shadow-card-hover"
+      >
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1">
@@ -505,7 +536,7 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Modals */}
       <ContactHostModal

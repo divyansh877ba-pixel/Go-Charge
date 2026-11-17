@@ -207,17 +207,18 @@ export function App() {
       if (!authUser) {
         setLoginInitialRole('charger_owner');
         view = 'login';
-      } else if (authUser.role === 'consumer') {
+      } else if (!authUser.isHost && authUser.role !== 'charger_owner') {
         setRoleGuardMismatch({ requiredRole: 'charger_owner' });
         return;
+      } else if (authUser.role !== 'charger_owner') {
+        setAuthUser({ ...authUser, role: 'charger_owner' });
       }
     } else if (view === 'consumer-dashboard') {
       if (!authUser) {
         setLoginInitialRole('consumer');
         view = 'login';
-      } else if (authUser.role === 'charger_owner') {
-        setRoleGuardMismatch({ requiredRole: 'consumer' });
-        return;
+      } else if (authUser.role !== 'consumer') {
+        setAuthUser({ ...authUser, role: 'consumer' });
       }
     }
 
@@ -282,13 +283,13 @@ export function App() {
     if (authLoading) return;
     if (!authUser && (activeView === 'owner-dashboard' || activeView === 'consumer-dashboard')) {
       handleSetActiveView('login', '/login');
-    } else if (authUser && activeView === 'owner-dashboard' && authUser.role === 'consumer') {
-      // Consumers cannot access owner dashboard; redirect to consumer dashboard and show RoleGuard
-      setRoleGuardMismatch({ requiredRole: 'charger_owner' });
-      handleSetActiveView('consumer-dashboard', '/consumer/dashboard');
-    } else if (authUser && activeView === 'consumer-dashboard' && authUser.role === 'charger_owner') {
-      setRoleGuardMismatch({ requiredRole: 'consumer' });
-      handleSetActiveView('owner-dashboard', '/owner-dashboard');
+    } else if (authUser && activeView === 'owner-dashboard') {
+      const isAuthorizedHost = Boolean(authUser.isHost || authUser.role === 'charger_owner');
+      if (!isAuthorizedHost) {
+        // Consumers cannot access owner dashboard; redirect to consumer dashboard and show RoleGuard
+        setRoleGuardMismatch({ requiredRole: 'charger_owner' });
+        handleSetActiveView('consumer-dashboard', '/consumer/dashboard');
+      }
     }
   }, [authLoading, authUser, activeView]);
 
@@ -587,6 +588,13 @@ export function App() {
 
   const currentViewKey = detailStation ? `detail-${detailStation.id}` : activeView;
 
+  // Premium cubic-bezier page motion specification
+  const pageMotion = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1] } },
+    exit: { opacity: 0, y: -6, transition: { duration: 0.18, ease: [0.16, 1, 0.3, 1] } },
+  };
+
   return (
     <div className={`relative min-h-screen bg-[#F4F1E8] dark:bg-[#071715] text-[#14201F] dark:text-[#E4EFEA] font-sans transition-colors duration-300 ${
       activeView === 'owner-dashboard' && authUser?.role === 'charger_owner' ? 'h-[100dvh] overflow-hidden' : 'overflow-x-hidden'
@@ -644,10 +652,10 @@ export function App() {
         {detailStation ? (
           <motion.div
             key={currentViewKey}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
           >
             <StationDetailPage
               station={detailStation}
@@ -663,10 +671,10 @@ export function App() {
         ) : activeView === 'login' ? (
           <motion.div
             key="login-view"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
           >
             <TwoWayLoginPage
               initialRole={loginInitialRole}
@@ -677,12 +685,12 @@ export function App() {
         ) : activeView === 'consumer-dashboard' ? (
           <motion.div
             key="consumer-dashboard-view"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
           >
-            {authUser && authUser.role === 'consumer' ? (
+            {authUser ? (
               <ConsumerDashboard
                 user={authUser}
                 onLogout={handleLogout}
@@ -695,6 +703,7 @@ export function App() {
                 onToggleFavorite={toggleFavorite}
                 selectedVehicle={selectedVehicle}
                 onSelectVehicle={handleSelectVehicle}
+                onSwitchToHostDashboard={authUser.isHost ? () => handleSetActiveView('owner-dashboard', '/owner-dashboard') : undefined}
               />
             ) : (
               <TwoWayLoginPage
@@ -707,13 +716,13 @@ export function App() {
         ) : activeView === 'owner-dashboard' ? (
           <motion.div
             key="owner-dashboard-view"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
-            className={authUser && authUser.role === 'charger_owner' ? "h-[100dvh] w-full overflow-hidden" : ""}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className={authUser && (authUser.isHost || authUser.role === 'charger_owner') ? "h-[100dvh] w-full overflow-hidden" : ""}
           >
-            {authUser && authUser.role === 'charger_owner' ? (
+            {authUser && (authUser.isHost || authUser.role === 'charger_owner') ? (
               <OwnerDashboard
                 chargers={hostChargers}
                 bookings={hostBookings}
@@ -728,6 +737,7 @@ export function App() {
                 onUpdateProfile={handleUpdateHostProfile}
                 onUpdateBookingStatus={handleUpdateHostBookingStatus}
                 onReturnToMap={() => handleSetActiveView('map')}
+                onGoToConsumerDashboard={() => handleSetActiveView('consumer-dashboard', '/consumer/dashboard')}
                 onLogout={handleLogout}
               />
             ) : (
@@ -741,10 +751,10 @@ export function App() {
         ) : activeView === 'about' ? (
           <motion.div
             key="about-view"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
           >
             <AboutUsPage
               onGoToHome={() => handleSetActiveView('home')}
@@ -756,10 +766,10 @@ export function App() {
         ) : activeView === 'home' ? (
           <motion.div
             key="home-view"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
           >
             <div className="pt-16 sm:pt-20">
               <LandingPage
@@ -779,10 +789,10 @@ export function App() {
         ) : (
           <motion.div
             key="map-view"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            variants={pageMotion}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             className="flex flex-col h-screen w-screen overflow-hidden"
           >
             {/* Main Layout Container */}

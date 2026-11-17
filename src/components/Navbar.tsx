@@ -57,8 +57,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Supabase Auth as single source of truth
   const user = authUser;
 
-  const isConsumer = user?.role === 'consumer';
-  const isOwner = user?.role === 'charger_owner';
+  const isConsumer = Boolean(user);
+  const isOwner = Boolean(user?.isHost || user?.role === 'charger_owner');
 
   // Platform-appropriate keyboard shortcut hint (Ctrl+K or ⌘K)
   const isMac = typeof window !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);

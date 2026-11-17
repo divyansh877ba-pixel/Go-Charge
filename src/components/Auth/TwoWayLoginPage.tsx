@@ -233,14 +233,34 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
         const perms = await getUserPermissions(activeUser.id);
         const meta = activeUser.user_metadata || {};
         const fullName = profile?.full_name || meta.full_name || meta.name || cleanEmail.split('@')[0];
-        const role: UserRole = perms.role;
+
+        // Resolve active role strictly based on user intent and verified database authorization
+        let resolvedRole: UserRole = 'consumer';
+        if (selectedRole === 'charger_owner') {
+          if (perms.isHost) {
+            resolvedRole = 'charger_owner';
+          } else {
+            setLoading(false);
+            setError('Access Denied: This account is registered as an EV Driver (Consumer) and does not have host management privileges. Please sign in as an EV Driver or register as a Charger Owner.');
+            return;
+          }
+        } else if (selectedRole === 'consumer') {
+          resolvedRole = 'consumer';
+        } else {
+          resolvedRole = perms.isHost ? 'charger_owner' : 'consumer';
+        }
 
         const userObj: AuthUser = {
           id: activeUser.id,
           name: fullName,
           email: activeUser.email || cleanEmail,
           phone: activeUser.phone || meta.phone || '+91 98765 43210',
-          role,
+          role: resolvedRole,
+          isHost: perms.isHost,
+          isConsumer: true,
+          canSwitchRoles: perms.isHost,
+          organizationId: perms.organizationId,
+          organizationRole: perms.organizationRole,
           ownerType: meta.owner_type || meta.ownerType || ownerType,
           businessName: perms.organizationName || meta.business_name || meta.businessName || businessName,
           city: profile?.state || city,
@@ -324,6 +344,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
           }
 
           const perms = await getUserPermissions(authData.user.id);
+          const isHost = selectedRole === 'charger_owner' || perms.isHost;
 
           const userObj: AuthUser = {
             id: authData.user.id,
@@ -331,6 +352,11 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
             email: cleanEmail,
             phone: phone.trim() ? (phone.startsWith('+91') ? phone : `+91 ${phone}`) : '+91 98765 43210',
             role: selectedRole || perms.role,
+            isHost,
+            isConsumer: true,
+            canSwitchRoles: isHost,
+            organizationId: perms.organizationId,
+            organizationRole: perms.organizationRole,
             ownerType: selectedRole === 'charger_owner' ? ownerType : undefined,
             businessName: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
             city: city.trim(),
@@ -434,12 +460,33 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
         });
       }
 
+      // Resolve active role strictly based on user intent and verified database authorization
+      let resolvedRole: UserRole = 'consumer';
+      if (selectedRole === 'charger_owner') {
+        if (perms.isHost) {
+          resolvedRole = 'charger_owner';
+        } else {
+          setLoading(false);
+          setError('Access Denied: This account is registered as an EV Driver (Consumer) and does not have host management privileges. Please sign in as an EV Driver or register as a Charger Owner.');
+          return;
+        }
+      } else if (selectedRole === 'consumer') {
+        resolvedRole = 'consumer';
+      } else {
+        resolvedRole = perms.isHost ? 'charger_owner' : 'consumer';
+      }
+
       const userObj: AuthUser = {
         id: authData.user.id,
         name: fullName,
         email: authData.user.email || `${cleanPhone}@gocharge.in`,
         phone: cleanPhone,
-        role: perms.role,
+        role: resolvedRole,
+        isHost: perms.isHost,
+        isConsumer: true,
+        canSwitchRoles: perms.isHost,
+        organizationId: perms.organizationId,
+        organizationRole: perms.organizationRole,
         ownerType: selectedRole === 'charger_owner' ? ownerType : undefined,
         businessName: selectedRole === 'charger_owner' && ownerType === 'business' ? businessName.trim() : undefined,
         city,
@@ -472,7 +519,12 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
       });
 
       if (googleError) {
-        setError(googleError.message);
+        const lower = googleError.message.toLowerCase();
+        if (lower.includes('unsupported provider') || lower.includes('not enabled')) {
+          setError('Google Sign-In is not currently configured in the Supabase Dashboard. Please sign in with your email & password, or phone number.');
+        } else {
+          setError(googleError.message);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Google authentication failed.');
@@ -576,7 +628,9 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                   
                   {/* CARD 1 – CONSUMER */}
-                  <div
+                  <motion.div
+                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                    whileTap={{ scale: 0.99 }}
                     onClick={() => {
                       setSelectedRole('consumer');
                       setAuthMode('signin');
@@ -619,10 +673,12 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* CARD 2 – CHARGER OWNER */}
-                  <div
+                  <motion.div
+                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                    whileTap={{ scale: 0.99 }}
                     onClick={() => {
                       setSelectedRole('charger_owner');
                       setAuthMode('signin');
@@ -665,7 +721,7 @@ export const TwoWayLoginPage: React.FC<TwoWayLoginPageProps> = ({
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
 
                 </div>
 

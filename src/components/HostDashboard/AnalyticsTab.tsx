@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { 
   BarChart3, TrendingUp, Zap, Clock, Calendar, 
   MapPin, Activity, ArrowUpRight, BatteryCharging, Filter 
@@ -38,11 +39,36 @@ export const AnalyticsTab: React.FC = () => {
     { name: 'EcoStay Boutique Hotel Point', sessions: 86, energy: 1840, revenue: 5600, uptime: 97.2 },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.04,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-[#E4EFEA] tracking-tight">Analytics & Telemetry</h2>
           <p className="text-xs sm:text-sm text-gray-500 dark:text-[#8FAFA9] mt-0.5">
@@ -51,27 +77,37 @@ export const AnalyticsTab: React.FC = () => {
         </div>
 
         {/* Timeframe Filter Pills */}
-        <div className="p-1 bg-white dark:bg-[#081B19] border border-gray-200 dark:border-[#183E3A] rounded-xl flex shadow-sm text-xs font-semibold">
+        <div className="p-1 bg-white dark:bg-[#081B19] border border-gray-200 dark:border-[#183E3A] rounded-xl flex shadow-sm text-xs font-semibold relative">
           {(['7d', '30d', '90d'] as const).map((tf) => (
             <button
               key={tf}
               type="button"
               onClick={() => setTimeRange(tf)}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`relative px-3 py-1.5 rounded-lg transition-colors cursor-pointer z-10 ${
                 timeRange === tf
-                  ? 'bg-[#073B35] dark:bg-[#18C5B7] text-white dark:text-[#071715] shadow-sm'
+                  ? 'text-white dark:text-[#071715] font-bold'
                   : 'text-gray-600 dark:text-[#7A9E99] hover:text-gray-900 dark:hover:text-white'
               }`}
             >
+              {timeRange === tf && (
+                <motion.div
+                  layoutId="activeTimeRangePill"
+                  className="absolute inset-0 rounded-lg bg-[#073B35] dark:bg-[#18C5B7] -z-10 shadow-sm"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
               {tf.toUpperCase()}
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Top 3 High Level KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-sm">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-sm cursor-pointer"
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-[#7A9E99] font-semibold uppercase">
             <span>Peak Utilization Window</span>
             <Clock className="w-4 h-4 text-[#18C5B7]" />
@@ -81,29 +117,35 @@ export const AnalyticsTab: React.FC = () => {
             <TrendingUp className="w-3.5 h-3.5" />
             <span>96% average bay occupancy</span>
           </p>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-sm">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-sm cursor-pointer"
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-[#7A9E99] font-semibold uppercase">
             <span>Average Session Duration</span>
             <Activity className="w-4 h-4 text-[#18C5B7]" />
           </div>
           <div className="text-2xl font-extrabold text-[#073B35] dark:text-[#E4EFEA] mt-2">38.4 Minutes</div>
           <p className="text-xs text-gray-500 dark:text-[#8FAFA9] mt-1">26.8 kWh avg delivered per session</p>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-sm">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-sm cursor-pointer"
+        >
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-[#7A9E99] font-semibold uppercase">
             <span>Network Hardware Uptime</span>
             <BatteryCharging className="w-4 h-4 text-[#18C5B7]" />
           </div>
           <div className="text-2xl font-extrabold text-[#073B35] dark:text-[#E4EFEA] mt-2">99.1%</div>
           <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">OCPP 2.0.1 heartbeat active</p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Hourly Occupancy Bar Chart & Speed Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         {/* Hourly Chart (col-span-8) */}
         <div className="lg:col-span-8 bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-sm space-y-4">
@@ -127,7 +169,7 @@ export const AnalyticsTab: React.FC = () => {
                   formatter={(val: number) => [`${val}% Occupancy`, 'Demand']}
                   contentStyle={{ backgroundColor: '#073B35', borderRadius: '12px', border: '1px solid #183E3A', color: '#fff', fontSize: '12px' }}
                 />
-                <Bar dataKey="occupancy" fill="#18C5B7" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="occupancy" fill="#18C5B7" radius={[8, 8, 0, 0]} isAnimationActive={true} animationDuration={650} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -151,6 +193,8 @@ export const AnalyticsTab: React.FC = () => {
                   outerRadius={70}
                   paddingAngle={5}
                   dataKey="value"
+                  isAnimationActive={true}
+                  animationDuration={650}
                 >
                   {CONNECTOR_DISTRIBUTION.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -174,10 +218,10 @@ export const AnalyticsTab: React.FC = () => {
           </div>
         </div>
 
-      </div>
+      </motion.div>
 
       {/* Station Performance Comparative Table */}
-      <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-sm space-y-4">
+      <motion.div variants={itemVariants} className="bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-sm space-y-4">
         <div>
           <h3 className="font-bold text-base text-gray-900 dark:text-[#E4EFEA]">Station-By-Station Benchmarking</h3>
           <p className="text-xs text-gray-400 dark:text-[#7A9E99]">Comparative revenue, throughput and operational reliability</p>
@@ -207,8 +251,8 @@ export const AnalyticsTab: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };

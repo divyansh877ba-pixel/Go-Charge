@@ -5,7 +5,7 @@ import {
   Settings, MapPin, Plus, ArrowRight, CheckCircle2, XCircle, 
   Clock, ShieldCheck, Navigation, LogOut, Sun, Moon, 
   Sparkles, ChevronRight, Phone, QrCode, Trash2, 
-  Check, ArrowLeft, Fuel, Info
+  Check, ArrowLeft, Fuel, Info, LayoutDashboard
 } from 'lucide-react';
 import { AuthUser } from '../../hooks/useAuth';
 import { Station, Connector } from '../../types';
@@ -112,6 +112,7 @@ interface ConsumerDashboardProps {
   selectedVehicle: VehicleModel | null;
   onSelectVehicle: (vehicle: VehicleModel | null) => void;
   initialTab?: ConsumerTab;
+  onSwitchToHostDashboard?: () => void;
 }
 
 export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
@@ -125,7 +126,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   onToggleFavorite,
   selectedVehicle,
   onSelectVehicle,
-  initialTab = 'overview'
+  initialTab = 'overview',
+  onSwitchToHostDashboard,
 }) => {
   const [activeTab, setActiveTab] = useState<ConsumerTab>(initialTab);
   const [bookings, setBookings] = useState<ConsumerBooking[]>(() => {
@@ -343,6 +345,19 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <MapPin className="w-3.5 h-3.5 text-[#18C5B7]" />
               <span>Explore Live Map</span>
             </button>
+
+            {/* Dual-role Host Portal Shortcut */}
+            {onSwitchToHostDashboard && (
+              <button
+                type="button"
+                onClick={onSwitchToHostDashboard}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-[#18C5B7] hover:bg-[#15A896] text-white text-xs font-bold transition-all shadow-glow-teal-sm cursor-pointer active:scale-95"
+                title="Switch to Host Dashboard"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Host Portal</span>
+              </button>
+            )}
           </div>
 
           {/* Right Controls: Active Vehicle Pill, Theme Toggle, User Badge, Logout */}
@@ -435,12 +450,19 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-pill font-bold text-xs transition-all whitespace-nowrap cursor-pointer ${
+                  className={`relative flex items-center gap-2 px-3.5 py-2 rounded-pill font-bold text-xs transition-colors whitespace-nowrap cursor-pointer z-10 ${
                     isActive
-                      ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                      ? 'text-white'
                       : 'bg-white/60 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-[#4E615E] dark:text-[#9EC4BD]'
                   }`}
                 >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeConsumerTabPill"
+                      className="absolute inset-0 rounded-pill bg-[#18C5B7] shadow-glow-teal-sm -z-10"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                    />
+                  )}
                   <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && tab.badge > 0 && (
@@ -468,10 +490,17 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
       {/* 3. MAIN DASHBOARD CONTENT */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-6 sm:py-8">
-        
-        {/* ======================================================== */}
-        {/* TAB 1: OVERVIEW */}
-        {/* ======================================================== */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* ======================================================== */}
+            {/* TAB 1: OVERVIEW */}
+            {/* ======================================================== */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             
@@ -1386,6 +1415,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
           </div>
         )}
 
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* ======================================================== */}

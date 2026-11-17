@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, BatteryCharging, CheckCircle2, AlertOctagon, IndianRupee, Clock, Activity } from 'lucide-react';
 import { Station, Connector } from '../../types';
 
@@ -56,7 +57,12 @@ export const ChargingSessionModal: React.FC<ChargingSessionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-md p-6 rounded-card bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl text-[#14201F] dark:text-[#E4EFEA] space-y-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-md p-6 rounded-card bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl text-[#14201F] dark:text-[#E4EFEA] space-y-6"
+      >
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#D9DED5] dark:border-[#183E3A]">
@@ -132,21 +138,37 @@ export const ChargingSessionModal: React.FC<ChargingSessionModalProps> = ({
           /* Live Charging In Progress */
           <div className="space-y-6">
             
-            {/* Battery Circular / Ring Preview */}
+            {/* Battery Circular / Progress Ring Preview */}
             <div className="text-center">
               <div className="relative inline-flex items-center justify-center">
-                <div className="w-32 h-32 rounded-full border-4 border-[#D9DED5] dark:border-[#183E3A] flex items-center justify-center relative bg-[#F4F1E8] dark:bg-[#081B19]">
-                  <div
-                    className="absolute inset-0 rounded-full border-4 border-[#19C7B1] border-t-transparent animate-spin"
-                    style={{ animationDuration: '3s' }}
+                <svg className="w-36 h-36 transform -rotate-90">
+                  <circle
+                    cx="72"
+                    cy="72"
+                    r="54"
+                    className="stroke-[#D9DED5] dark:stroke-[#183E3A]"
+                    strokeWidth="8"
+                    fill="transparent"
                   />
-                  <div className="flex flex-col items-center">
-                    <BatteryCharging className="w-6 h-6 text-[#19C7B1] mb-1 animate-pulse" />
-                    <span className="text-2xl font-black text-[#123C3A] dark:text-[#E4EFEA] tabular-nums">
-                      {Math.floor(batteryPercent)}%
-                    </span>
-                    <span className="text-[10px] text-[#5E716E] dark:text-[#8FAFA9] font-semibold">SoC</span>
-                  </div>
+                  <circle
+                    cx="72"
+                    cy="72"
+                    r="54"
+                    stroke="#19C7B1"
+                    strokeWidth="8"
+                    strokeDasharray="339.29"
+                    strokeDashoffset={339.29 - (Math.min(100, Math.max(0, batteryPercent)) / 100) * 339.29}
+                    strokeLinecap="round"
+                    fill="transparent"
+                    style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <BatteryCharging className="w-6 h-6 text-[#19C7B1] mb-1 animate-pulse" />
+                  <span className="text-2xl font-black text-[#123C3A] dark:text-[#E4EFEA] tabular-nums">
+                    {Math.floor(batteryPercent)}%
+                  </span>
+                  <span className="text-[10px] text-[#5E716E] dark:text-[#8FAFA9] font-semibold">SoC</span>
                 </div>
               </div>
 
@@ -191,7 +213,7 @@ export const ChargingSessionModal: React.FC<ChargingSessionModalProps> = ({
           </div>
         )}
 
-      </div>
+      </motion.div>
     </div>
   );
 };

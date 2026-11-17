@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, LayoutDashboard, BatteryCharging, CalendarCheck, 
   TrendingUp, User, PlusCircle, ArrowLeft, ShieldCheck, 
@@ -52,6 +53,7 @@ interface OwnerDashboardProps {
   onUpdateProfile: (updates: Partial<HostProfile>) => void;
   onUpdateBookingStatus: (id: string, status: BookingStatus) => void;
   onReturnToMap: () => void;
+  onGoToConsumerDashboard?: () => void;
   onLogout?: () => void;
   initialTab?: DashboardTab;
 }
@@ -70,6 +72,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   onUpdateProfile,
   onUpdateBookingStatus,
   onReturnToMap,
+  onGoToConsumerDashboard,
   onLogout,
   initialTab = 'overview',
 }) => {
@@ -200,13 +203,20 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => handleTabSelect(item.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 group ${
+                    className={`relative w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors duration-200 group cursor-pointer ${
                       isActive
-                        ? 'bg-[#18C5B7] text-[#073B35] font-bold shadow-md shadow-[#18C5B7]/25 translate-x-1'
+                        ? 'text-[#073B35] font-bold'
                         : 'text-[#E0EFEA] hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeHostNavTab"
+                        className="absolute inset-0 bg-[#18C5B7] rounded-xl shadow-md shadow-[#18C5B7]/25"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <div className="relative z-10 flex items-center gap-3">
                       <Icon className={`w-4 h-4 transition-colors ${
                         isActive ? 'text-[#073B35]' : 'text-[#87B8B1] group-hover:text-white'
                       }`} />
@@ -214,7 +224,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     </div>
 
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      <span className={`relative z-10 text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         isActive ? 'bg-[#073B35] text-white' : 'bg-white/20 text-[#E0EFEA]'
                       }`}>
                         {item.badge}
@@ -260,6 +270,18 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               <ArrowLeft className="w-3.5 h-3.5 text-[#18C5B7]" />
               <span>Back to Driver Map</span>
             </button>
+
+            {/* Consumer Dashboard Button for Dual-Role Switch */}
+            {onGoToConsumerDashboard && (
+              <button
+                type="button"
+                onClick={onGoToConsumerDashboard}
+                className="w-full py-2 px-3 rounded-xl bg-[#18C5B7]/15 hover:bg-[#18C5B7]/25 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all border border-[#18C5B7]/30 cursor-pointer active:scale-95"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-[#18C5B7]" />
+                <span>Consumer Dashboard</span>
+              </button>
+            )}
 
             {/* Owner Logout Button */}
             {onLogout && (
@@ -352,6 +374,20 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <ArrowLeft className="w-3.5 h-3.5 text-[#18C5B7]" />
                   <span>Return to Driver Map</span>
                 </button>
+
+                {onGoToConsumerDashboard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileSidebarOpen(false);
+                      onGoToConsumerDashboard();
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-[#18C5B7]/20 text-white text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-[#18C5B7]" />
+                    <span>Consumer Dashboard</span>
+                  </button>
+                )}
 
                 {onLogout && (
                   <button
@@ -524,71 +560,81 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
           {/* Main Body View Container */}
           <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
-            {activeTab === 'overview' && (
-              <DashboardOverview
-                chargers={chargers}
-                bookings={bookings}
-                summaryMetrics={summaryMetrics}
-                onNavigateTab={(tab) => setActiveTab(tab)}
-                onOpenAddCharger={() => setIsAddModalOpen(true)}
-                onViewChargerDetails={(charger) => setDetailsCharger(charger)}
-                onTogglePause={onTogglePause}
-                onEditCharger={(charger) => setEditingCharger(charger)}
-                selectedLocation={selectedLocation}
-                selectedTimeframe={selectedTimeframe}
-                onSelectLocation={setSelectedLocation}
-                onSelectTimeframe={setSelectedTimeframe}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {activeTab === 'overview' && (
+                  <DashboardOverview
+                    chargers={chargers}
+                    bookings={bookings}
+                    summaryMetrics={summaryMetrics}
+                    onNavigateTab={(tab) => setActiveTab(tab)}
+                    onOpenAddCharger={() => setIsAddModalOpen(true)}
+                    onViewChargerDetails={(charger) => setDetailsCharger(charger)}
+                    onTogglePause={onTogglePause}
+                    onEditCharger={(charger) => setEditingCharger(charger)}
+                    selectedLocation={selectedLocation}
+                    selectedTimeframe={selectedTimeframe}
+                    onSelectLocation={setSelectedLocation}
+                    onSelectTimeframe={setSelectedTimeframe}
+                  />
+                )}
 
-            {activeTab === 'chargers' && (
-              <MyChargersTab
-                chargers={chargers}
-                onOpenAddCharger={() => setIsAddModalOpen(true)}
-                onViewDetails={(charger) => setDetailsCharger(charger)}
-                onEditCharger={(charger) => setEditingCharger(charger)}
-                onTogglePause={onTogglePause}
-                onDeleteCharger={onDeleteCharger}
-              />
-            )}
+                {activeTab === 'chargers' && (
+                  <MyChargersTab
+                    chargers={chargers}
+                    onOpenAddCharger={() => setIsAddModalOpen(true)}
+                    onViewDetails={(charger) => setDetailsCharger(charger)}
+                    onEditCharger={(charger) => setEditingCharger(charger)}
+                    onTogglePause={onTogglePause}
+                    onDeleteCharger={onDeleteCharger}
+                  />
+                )}
 
-            {activeTab === 'bookings' && (
-              <BookingsTab
-                bookings={bookings}
-                onUpdateStatus={onUpdateBookingStatus}
-              />
-            )}
+                {activeTab === 'bookings' && (
+                  <BookingsTab
+                    bookings={bookings}
+                    onUpdateStatus={onUpdateBookingStatus}
+                  />
+                )}
 
-            {activeTab === 'earnings' && (
-              <EarningsTab
-                transactions={transactions}
-                monthlyData={monthlyEarningsData}
-                summaryMetrics={{
-                  totalEarnings: summaryMetrics.totalEarnings,
-                  monthlyEarnings: summaryMetrics.monthlyEarnings,
-                  pendingPayouts: summaryMetrics.pendingPayouts,
-                }}
-              />
-            )}
+                {activeTab === 'earnings' && (
+                  <EarningsTab
+                    transactions={transactions}
+                    monthlyData={monthlyEarningsData}
+                    summaryMetrics={{
+                      totalEarnings: summaryMetrics.totalEarnings,
+                      monthlyEarnings: summaryMetrics.monthlyEarnings,
+                      pendingPayouts: summaryMetrics.pendingPayouts,
+                    }}
+                  />
+                )}
 
-            {activeTab === 'analytics' && (
-              <AnalyticsTab />
-            )}
+                {activeTab === 'analytics' && (
+                  <AnalyticsTab />
+                )}
 
-            {activeTab === 'reviews' && (
-              <ReviewsTab />
-            )}
+                {activeTab === 'reviews' && (
+                  <ReviewsTab />
+                )}
 
-            {activeTab === 'profile' && (
-              <HostProfileTab
-                profile={profile}
-                onUpdateProfile={onUpdateProfile}
-              />
-            )}
+                {activeTab === 'profile' && (
+                  <HostProfileTab
+                    profile={profile}
+                    onUpdateProfile={onUpdateProfile}
+                  />
+                )}
 
-            {activeTab === 'settings' && (
-              <SettingsTab />
-            )}
+                {activeTab === 'settings' && (
+                  <SettingsTab />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </main>
 
         </div>

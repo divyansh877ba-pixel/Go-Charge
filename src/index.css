@@ -113,34 +113,6 @@ body {
   border-color: #18C5B7;
 }
 
-/* Leaflet Sand & Teal styling */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  background: #EAE5D7 !important;
-  font-family: 'Inter', sans-serif !important;
-}
-
-.leaflet-control-zoom {
-  display: none !important;
-}
-
-.leaflet-control-attribution {
-  background: rgba(244, 241, 232, 0.9) !important;
-  color: #5E716E !important;
-  font-size: 10px !important;
-  border-radius: 6px !important;
-  margin: 6px !important;
-  padding: 2px 6px !important;
-  border: 1px solid #D9DED5 !important;
-}
-
-.leaflet-control-attribution a {
-  color: #123C3A !important;
-  font-weight: 500;
-  text-decoration: none !important;
-}
-
 /* Marker Styling & Pulse animations */
 @keyframes greenPulse {
   0% {
@@ -256,35 +228,6 @@ body {
 
 .dark .maplibregl-ctrl-attrib a {
   color: #19C7B1 !important;
-}
-
-/* Custom Leaflet Popup Overrides */
-.leaflet-popup-content-wrapper {
-  background: #FFFFFF !important;
-  border: 1px solid #D9DED5 !important;
-  border-radius: 14px !important;
-  padding: 0 !important;
-  color: #14201F !important;
-  box-shadow: 0 14px 38px rgba(18, 60, 58, 0.14) !important;
-}
-
-.leaflet-popup-content {
-  margin: 0 !important;
-  line-height: normal !important;
-}
-
-.leaflet-popup-tip {
-  background: #FFFFFF !important;
-  border: 1px solid #D9DED5 !important;
-}
-
-.leaflet-popup-close-button {
-  color: #5E716E !important;
-  padding: 6px 8px !important;
-}
-
-.leaflet-popup-close-button:hover {
-  color: #123C3A !important;
 }
 
 /* Hero Text Light Sweep Effect (one-time smooth shimmer on load) */

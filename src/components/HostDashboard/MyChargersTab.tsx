@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Plus, Eye, Edit3, Pause, Play, Trash2, 
   MapPin, CheckCircle2, Clock, AlertCircle, Search, Filter, ShieldAlert
@@ -40,6 +41,26 @@ export const MyChargersTab: React.FC<MyChargersTabProps> = ({
   });
 
   const chargerToDelete = chargers.find((c) => c.id === deleteConfirmId);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.06,
+        delayChildren: 0.04,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -126,12 +147,19 @@ export const MyChargersTab: React.FC<MyChargersTabProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+        >
           {filteredChargers.map((charger) => {
             const isPaused = charger.status === 'paused';
             return (
-              <div
+              <motion.div
                 key={charger.id}
+                variants={itemVariants}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 className="rounded-2xl bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#183E3A] hover:border-[#19C7B1] dark:hover:border-[#18C5B7] shadow-sm hover:shadow-card-subtle transition-all overflow-hidden flex flex-col justify-between"
               >
                 {/* Image Cover with Status Badges */}
@@ -246,51 +274,59 @@ export const MyChargersTab: React.FC<MyChargersTabProps> = ({
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* Confirmation Modal for Destructive Delete Action */}
-      {deleteConfirmId && chargerToDelete && (
-        <div className="fixed inset-0 z-[2500] flex items-center justify-center p-4 bg-[#123C3A]/70 dark:bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white dark:bg-[#0D2422] rounded-2xl border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl p-6 space-y-4 text-[#14201F] dark:text-[#E4EFEA]">
-            <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
+      <AnimatePresence>
+        {deleteConfirmId && chargerToDelete && (
+          <div className="fixed inset-0 z-[2500] flex items-center justify-center p-4 bg-[#123C3A]/70 dark:bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md bg-white dark:bg-[#0D2422] rounded-2xl border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl p-6 space-y-4 text-[#14201F] dark:text-[#E4EFEA]"
+            >
+              <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
 
-            <div className="text-center space-y-1">
-              <h3 className="text-base font-extrabold text-[#123C3A] dark:text-[#E4EFEA]">
-                Delete Charger Listing?
-              </h3>
-              <p className="text-xs text-[#5E716E] dark:text-[#8FAFA9]">
-                Are you sure you want to remove <strong>"{chargerToDelete.name}"</strong>? This will permanently delete the port listing and cancel upcoming driver reservations.
-              </p>
-            </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-base font-extrabold text-[#123C3A] dark:text-[#E4EFEA]">
+                  Delete Charger Listing?
+                </h3>
+                <p className="text-xs text-[#5E716E] dark:text-[#8FAFA9]">
+                  Are you sure you want to remove <strong>"{chargerToDelete.name}"</strong>? This will permanently delete the port listing and cancel upcoming driver reservations.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmId(null)}
-                className="min-h-[44px] py-2.5 px-4 rounded-btn bg-[#E9EFE7] hover:bg-[#D9DED5] text-xs font-bold text-[#123C3A] dark:bg-[#081B19] dark:hover:bg-[#163834] dark:text-[#E4EFEA] border border-transparent dark:border-[#183E3A] transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onDeleteCharger(chargerToDelete.id);
-                  setDeleteConfirmId(null);
-                }}
-                className="min-h-[44px] py-2.5 px-4 rounded-btn bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
-              >
-                Yes, Delete
-              </button>
-            </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="min-h-[44px] py-2.5 px-4 rounded-btn bg-[#E9EFE7] hover:bg-[#D9DED5] text-xs font-bold text-[#123C3A] dark:bg-[#081B19] dark:hover:bg-[#163834] dark:text-[#E4EFEA] border border-transparent dark:border-[#183E3A] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteCharger(chargerToDelete.id);
+                    setDeleteConfirmId(null);
+                  }}
+                  className="min-h-[44px] py-2.5 px-4 rounded-btn bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
     </div>
   );

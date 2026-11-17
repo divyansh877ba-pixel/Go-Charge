@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { 
   IndianRupee, TrendingUp, Calendar, ArrowUpRight, CheckCircle2, 
   Clock, AlertCircle, Download, Wallet, CreditCard, Sparkles, Building2
@@ -34,10 +35,35 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
     }, 4000);
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.04,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* Header and Illustrative Data Notice */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-[#123C3A] dark:text-[#E4EFEA]">Earnings & Financials</h2>
           <p className="text-sm text-gray-500 dark:text-[#8FAFA9] mt-0.5">
@@ -48,11 +74,14 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
           <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <span>Demo figures are for mock illustration only</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-200/80 dark:border-[#183E3A] shadow-sm relative overflow-hidden">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-200/80 dark:border-[#183E3A] shadow-sm relative overflow-hidden cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 dark:text-[#7A9E99] uppercase tracking-wider">Gross Lifetime</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -66,9 +95,12 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
             <TrendingUp className="w-3.5 h-3.5" />
             <span>+18.4% from last month</span>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-200/80 dark:border-[#183E3A] shadow-sm">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-200/80 dark:border-[#183E3A] shadow-sm cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 dark:text-[#7A9E99] uppercase tracking-wider">This Month (Nov)</span>
             <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-[#19C7B1] dark:text-[#18C5B7] flex items-center justify-center">
@@ -81,9 +113,12 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
           <div className="text-xs text-gray-500 dark:text-[#8FAFA9] mt-1">
             Targeting ₹38,000 this month
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-200/80 dark:border-[#183E3A] shadow-sm">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-200/80 dark:border-[#183E3A] shadow-sm cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 dark:text-[#7A9E99] uppercase tracking-wider">Pending Settlement</span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -96,9 +131,12 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
           <div className="text-xs text-gray-500 dark:text-[#8FAFA9] mt-1">
             Releasing on upcoming Tuesday
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-gradient-to-br from-[#123C3A] to-[#164846] dark:from-[#061B19] dark:to-[#0D2D29] border border-transparent dark:border-[#183E3A] text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+        <motion.div
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="bg-gradient-to-br from-[#123C3A] to-[#164846] dark:from-[#061B19] dark:to-[#0D2D29] border border-transparent dark:border-[#183E3A] text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between"
+        >
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">Payout Account</span>
@@ -108,11 +146,13 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
             <div className="text-xs text-white/70">HDFC Bank Auto-Sweep</div>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="button"
             onClick={handleRequestPayout}
             disabled={payoutRequested}
-            className="mt-3 w-full py-2 px-3 rounded-xl bg-[#19C7B1] dark:bg-[#18C5B7] text-[#123C3A] dark:text-[#071715] font-bold text-xs hover:bg-[#16B29E] dark:hover:bg-[#2FE0D2] transition-all flex items-center justify-center gap-1.5 shadow cursor-pointer"
+            className="mt-3 w-full py-2 px-3 rounded-xl bg-[#19C7B1] dark:bg-[#18C5B7] text-[#123C3A] dark:text-[#071715] font-bold text-xs hover:bg-[#16B29E] dark:hover:bg-[#2FE0D2] transition-all flex items-center justify-center gap-1.5 shadow cursor-pointer disabled:opacity-80"
           >
             {payoutRequested ? (
               <>
@@ -125,9 +165,9 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
                 <span>Instant Payout (Demo)</span>
               </>
             )}
-          </button>
-        </div>
-      </div>
+          </motion.button>
+        </motion.div>
+      </motion.div>
 
       {payoutRequested && (
         <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center gap-2 animate-in fade-in">
@@ -137,7 +177,7 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
       )}
 
       {/* Chart Section */}
-      <div className="bg-white dark:bg-[#0D2422] rounded-2xl border border-gray-200/80 dark:border-[#183E3A] p-6 shadow-sm space-y-4">
+      <motion.div variants={itemVariants} className="bg-white dark:bg-[#0D2422] rounded-2xl border border-gray-200/80 dark:border-[#183E3A] p-6 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-gray-900 dark:text-[#E4EFEA]">Revenue Growth Trend</h3>
@@ -217,14 +257,16 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
                 strokeWidth={2.5} 
                 fillOpacity={1} 
                 fill="url(#earningsColor)" 
+                isAnimationActive={true}
+                animationDuration={650}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </motion.div>
 
       {/* Transactions History */}
-      <div className="bg-white dark:bg-[#0D2422] rounded-2xl border border-gray-200/80 dark:border-[#183E3A] shadow-sm overflow-hidden">
+      <motion.div variants={itemVariants} className="bg-white dark:bg-[#0D2422] rounded-2xl border border-gray-200/80 dark:border-[#183E3A] shadow-sm overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-[#183E3A] flex items-center justify-between">
           <div>
             <h3 className="font-bold text-gray-900 dark:text-[#E4EFEA] text-base">Recent Settlements & Payouts</h3>
@@ -291,7 +333,7 @@ export const EarningsTab: React.FC<EarningsTabProps> = ({
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

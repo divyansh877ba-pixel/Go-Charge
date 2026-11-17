@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Calendar, Clock, Zap, IndianRupee, CheckCircle2, ShieldAlert, ArrowRight } from 'lucide-react';
 import { Station, Connector } from '../../types';
+import { createReservation } from '../../lib/supabaseService';
+import { supabase } from '../../lib/supabase';
 
 interface BookStationModalProps {
   isOpen: boolean;
@@ -30,21 +32,62 @@ export const BookStationModal: React.FC<BookStationModalProps> = ({
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     setIsConfirmed(true);
+
+    const bookingId = `bk-${Date.now().toString().slice(-6)}`;
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const formattedDate = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     const newBooking = {
-      id: `bk-${Date.now().toString().slice(-5)}`,
+      id: bookingId,
       stationId: station.id,
       stationName: station.name,
+      stationAddress: station.fullAddress || station.area,
       connectorType: selectedConnector?.type || 'CCS2',
+      connectorPower: `${selectedConnector?.powerKw || 30} kW`,
+      dateTime: formattedDate,
       durationMinutes,
-      totalCost,
-      status: 'confirmed',
+      energyKwh: estimatedUnitsKwh,
+      amount: totalCost,
+      status: 'upcoming' as const,
+      otpCode,
+      vehicleModel: 'My EV',
       createdAt: new Date().toISOString(),
     };
+
+    // 1. Sync to local consumer bookings storage
+    try {
+      const saved = localStorage.getItem('amperway_consumer_bookings');
+      const existing = saved ? JSON.parse(saved) : [];
+      localStorage.setItem('amperway_consumer_bookings', JSON.stringify([newBooking, ...existing]));
+    } catch (err) {
+      console.warn('Failed saving booking to localStorage:', err);
+    }
+
+    // 2. Persist to Supabase if authenticated
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        createReservation({
+          station_id: station.id,
+          connector_id: selectedConnector?.id,
+          start_at: new Date().toISOString(),
+          end_at: new Date(Date.now() + durationMinutes * 60000).toISOString(),
+          status: 'upcoming',
+        }).catch((err) => console.warn('Supabase createReservation background notice:', err));
+      }
+    });
+
     if (onBookingConfirmed) onBookingConfirmed(newBooking);
+
     setTimeout(() => {
       setIsConfirmed(false);
       onClose();
-    }, 2800);
+    }, 2400);
   };
 
   return (

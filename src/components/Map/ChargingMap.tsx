@@ -524,8 +524,9 @@ export const ChargingMap: React.FC<ChargingMapProps> = ({
         const existingMarker = markersRef.current[station.id];
 
         const innerContent = `
-          <div style="position: absolute; transform: translate(-50%, -50%);" class="flex items-center justify-center pointer-events-auto">
-            <div class="w-[${size}px] h-[${size}px] rounded-full ${markerBg} flex items-center justify-center border-2 border-white dark:border-[#071715] shadow-lg">
+          <div style="position: absolute; transform: translate(-50%, -50%);" class="flex items-center justify-center pointer-events-auto transition-transform duration-200 hover:scale-110 active:scale-95">
+            ${isSelected ? '<div class="absolute w-12 h-12 rounded-full bg-[#19C7B1]/30 animate-ping pointer-events-none"></div>' : ''}
+            <div class="w-[${size}px] h-[${size}px] rounded-full ${markerBg} flex items-center justify-center border-2 border-white dark:border-[#071715] shadow-lg transition-all duration-300">
               ${iconSvg}
             </div>
             <div class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full ${badgeBg} font-bold text-[10px] leading-tight flex items-center justify-center shadow-md tabular-nums">

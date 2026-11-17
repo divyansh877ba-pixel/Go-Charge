@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Zap, CalendarCheck, IndianRupee, Clock, ArrowRight, 
   CheckCircle2, PlusCircle, AlertCircle, ShieldCheck, ChevronRight,
@@ -86,14 +87,39 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.05,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    },
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       
       {/* ======================================================== */}
       {/* 1. TOP SECTION: CHARGERS STATUS CHART (LEFT) + 4 KPI CARDS (RIGHT) */}
       {/* Exactly replicating the top layout of the reference image */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         {/* LEFT: Chargers Status Pill Bar Card (col-span-5) */}
         <div className="lg:col-span-5 bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between transition-colors">
@@ -168,7 +194,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
           
           {/* Card 1: Sessions */}
-          <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all">
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-600 dark:text-[#88ABA6]">Sessions</span>
               <div className="w-10 h-10 rounded-full bg-[#18C5B7]/15 dark:bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7]">
@@ -182,10 +211,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <TrendingUp className="w-3.5 h-3.5" />
               <span>+2.5% vs previous 30 days</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 2: Revenue */}
-          <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all">
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-600 dark:text-[#88ABA6]">Revenue</span>
               <div className="w-10 h-10 rounded-full bg-[#18C5B7]/15 dark:bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7]">
@@ -199,10 +231,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <TrendingUp className="w-3.5 h-3.5" />
               <span>+9.1% vs previous 30 days</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 3: Energy */}
-          <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all">
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-600 dark:text-[#88ABA6]">Energy</span>
               <div className="w-10 h-10 rounded-full bg-[#18C5B7]/15 dark:bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7]">
@@ -216,10 +251,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <TrendingDown className="w-3.5 h-3.5" />
               <span>-6.9% vs previous 30 days</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 4: Cost */}
-          <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all">
+          <motion.div
+            whileHover={{ y: -3, transition: { duration: 0.2 } }}
+            className="bg-white dark:bg-[#0D2422] rounded-2xl p-5 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] flex flex-col justify-between hover:border-[#18C5B7]/40 transition-all cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-600 dark:text-[#88ABA6]">Cost</span>
               <div className="w-10 h-10 rounded-full bg-[#18C5B7]/15 dark:bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7]">
@@ -233,21 +271,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <TrendingUp className="w-3.5 h-3.5" />
               <span>+2.5% vs previous 30 days</span>
             </div>
-          </div>
+          </motion.div>
 
         </div>
 
-      </div>
+      </motion.div>
 
       {/* ======================================================== */}
       {/* 2. MAIN BOTTOM SECTION: INTERACTIVE METRIC TREND CHART */}
       {/* Exactly replicating the large bottom card in the reference image */}
       {/* ======================================================== */}
-      <div className="bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] space-y-6 transition-colors">
+      <motion.div variants={itemVariants} className="bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] space-y-6 transition-colors">
         
         {/* Metric Selector Pills matching reference image */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="inline-flex p-1 bg-gray-100 dark:bg-[#081B19] rounded-full border border-gray-200 dark:border-[#143B37]">
+          <div className="inline-flex p-1 bg-gray-100 dark:bg-[#081B19] rounded-full border border-gray-200 dark:border-[#143B37] relative">
             {(['sessions', 'energy', 'revenue', 'cost'] as const).map((metric) => {
               const isActive = activeMetricTab === metric;
               return (
@@ -255,12 +293,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   key={metric}
                   type="button"
                   onClick={() => setActiveMetricTab(metric)}
-                  className={`px-4 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-semibold capitalize transition-all duration-200 cursor-pointer ${
+                  className={`relative px-4 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-semibold capitalize transition-colors duration-200 cursor-pointer z-10 ${
                     isActive
-                      ? 'bg-white dark:bg-[#18C5B7] text-[#073B35] dark:text-[#06201D] shadow-sm font-bold'
+                      ? 'text-[#073B35] dark:text-[#06201D] font-bold'
                       : 'text-gray-500 dark:text-[#7A9E99] hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeMetricTabPill"
+                      className="absolute inset-0 rounded-full bg-white dark:bg-[#18C5B7] shadow-sm -z-10"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                    />
+                  )}
                   {metric}
                 </button>
               );
@@ -345,12 +390,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
         </div>
 
-      </div>
+      </motion.div>
 
       {/* ======================================================== */}
       {/* 3. ADDITIONAL KEY SAAS MODULES: LIVE CHARGING + MY CHARGERS */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         {/* Live Charging Session Widget (col-span-6) */}
         <div className="lg:col-span-6 bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] space-y-4 transition-colors">
@@ -506,12 +551,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
-      </div>
+      </motion.div>
 
       {/* ======================================================== */}
       {/* 4. RECENT BOOKINGS & EARNINGS GOAL SUMMARY */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         {/* Recent Bookings Feed (col-span-8) */}
         <div className="lg:col-span-8 bg-white dark:bg-[#0D2422] rounded-2xl p-6 border border-gray-100 dark:border-[#183E3A] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_25px_-2px_rgba(0,0,0,0.35)] space-y-4 transition-colors">
@@ -619,8 +664,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </button>
         </div>
 
-      </div>
+      </motion.div>
 
-    </div>
+    </motion.div>
   );
 };
