@@ -5,7 +5,7 @@ import {
   Settings, MapPin, Plus, ArrowRight, CheckCircle2, XCircle, 
   Clock, ShieldCheck, Navigation, LogOut, Sun, Moon, 
   Sparkles, ChevronRight, Phone, QrCode, Trash2, 
-  Check, ArrowLeft, Fuel, Info, LayoutDashboard
+  Check, ArrowLeft, Fuel, Info, LayoutDashboard, Menu, X, MoreHorizontal
 } from 'lucide-react';
 import { AuthUser } from '../../hooks/useAuth';
 import { Station, Connector } from '../../types';
@@ -163,6 +163,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
   // Booking status filter in bookings tab
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
+
+  // Mobile More bottom sheet toggle
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const { isDark, toggleTheme } = useTheme();
 
@@ -432,8 +435,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         </div>
       </header>
 
-      {/* 2. TAB NAVIGATION BAR */}
-      <div className="bg-[#EFECE3] dark:bg-[#0B1E1C] border-b border-[#D9DED5] dark:border-[#163835] px-4 sm:px-8 py-2 sticky top-[57px] z-30 transition-colors">
+      {/* 2. TAB NAVIGATION BAR (Desktop >= md) */}
+      <div className="hidden md:block bg-[#EFECE3] dark:bg-[#0B1E1C] border-b border-[#D9DED5] dark:border-[#163835] px-4 sm:px-8 py-2 sticky top-[57px] z-30 transition-colors">
         <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto no-scrollbar gap-2 sm:gap-4">
           <nav className="flex items-center gap-1.5 sm:gap-2">
             {[
@@ -489,7 +492,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       </div>
 
       {/* 3. MAIN DASHBOARD CONTENT */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-3.5 sm:px-8 py-5 sm:py-8 pb-24 md:pb-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -1643,6 +1646,228 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </div>
               </div>
 
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 4. MOBILE BOTTOM NAVIGATION (Home, Explore, Bookings, Garage, More) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#F8F7F2]/98 dark:bg-[#071715]/98 backdrop-blur-xl border-t border-[#D9DED5] dark:border-[#163835] px-2 py-1 pb-safe flex items-center justify-around shadow-2xl">
+        {/* Home */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('overview');
+            setMoreMenuOpen(false);
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'overview' && !moreMenuOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#5E716E] dark:text-[#88ABA6]'
+          }`}
+        >
+          <Zap className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">Home</span>
+        </button>
+
+        {/* Explore */}
+        <button
+          type="button"
+          onClick={() => {
+            setMoreMenuOpen(false);
+            onGoToMap();
+          }}
+          className="flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl text-[#5E716E] dark:text-[#88ABA6] hover:text-[#18C5B7] transition-colors cursor-pointer"
+        >
+          <MapPin className="w-5 h-5 mb-0.5 text-[#18C5B7]" />
+          <span className="text-[10px]">Explore</span>
+        </button>
+
+        {/* Bookings */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('bookings');
+            setMoreMenuOpen(false);
+          }}
+          className={`flex-1 relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'bookings' && !moreMenuOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#5E716E] dark:text-[#88ABA6]'
+          }`}
+        >
+          <div className="relative">
+            <CalendarCheck className="w-5 h-5 mb-0.5" />
+            {upcomingBookings.length > 0 && (
+              <span className="absolute -top-1 -right-2 w-3.5 h-3.5 rounded-full bg-[#18C5B7] text-[#071715] text-[9px] font-extrabold flex items-center justify-center">
+                {upcomingBookings.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px]">Bookings</span>
+        </button>
+
+        {/* Garage */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('vehicles');
+            setMoreMenuOpen(false);
+          }}
+          className={`flex-1 relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'vehicles' && !moreMenuOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#5E716E] dark:text-[#88ABA6]'
+          }`}
+        >
+          <div className="relative">
+            <Car className="w-5 h-5 mb-0.5" />
+            {savedVehicles.length > 0 && (
+              <span className="absolute -top-1 -right-2 w-3.5 h-3.5 rounded-full bg-[#18C5B7] text-[#071715] text-[9px] font-extrabold flex items-center justify-center">
+                {savedVehicles.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px]">Garage</span>
+        </button>
+
+        {/* More */}
+        <button
+          type="button"
+          onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            moreMenuOpen || activeTab === 'saved' || activeTab === 'profile' || activeTab === 'settings'
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#5E716E] dark:text-[#88ABA6]'
+          }`}
+        >
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">More</span>
+        </button>
+      </nav>
+
+      {/* 5. "MORE" MOBILE BOTTOM SHEET */}
+      <AnimatePresence>
+        {moreMenuOpen && (
+          <div className="fixed inset-0 z-50 md:hidden flex items-end">
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMoreMenuOpen(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="relative w-full bg-[#F4F1E8] dark:bg-[#0D2422] rounded-t-3xl border-t border-[#D9DED5] dark:border-[#1E4844] shadow-2xl p-5 pb-safe z-10 max-h-[80dvh] overflow-y-auto"
+            >
+              <div className="w-12 h-1.5 rounded-full bg-[#B8C2B3] dark:bg-[#1E4844] mx-auto mb-4" />
+
+              <div className="flex items-center justify-between pb-3 border-b border-[#D9DED5] dark:border-[#1E4844]">
+                <div>
+                  <h3 className="font-extrabold text-sm text-[#123C3A] dark:text-white">More Options</h3>
+                  <p className="text-[11px] text-[#5E716E] dark:text-[#8FAFA9]">{user.name} ({user.email || 'Consumer'})</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoreMenuOpen(false)}
+                  className="p-1 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="py-3 space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('saved');
+                    setMoreMenuOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'saved'
+                      ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                      : 'bg-white dark:bg-[#081B19] text-[#123C3A] dark:text-white border border-[#D9DED5] dark:border-[#1E4844]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Heart className="w-4 h-4 text-rose-500" />
+                    <span>Saved Chargers</span>
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20">{savedStationsList.length}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('profile');
+                    setMoreMenuOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'profile'
+                      ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                      : 'bg-white dark:bg-[#081B19] text-[#123C3A] dark:text-white border border-[#D9DED5] dark:border-[#1E4844]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <User className="w-4 h-4 text-[#18C5B7]" />
+                    <span>My Profile</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 opacity-50" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setMoreMenuOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'settings'
+                      ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                      : 'bg-white dark:bg-[#081B19] text-[#123C3A] dark:text-white border border-[#D9DED5] dark:border-[#1E4844]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Settings className="w-4 h-4 text-[#18C5B7]" />
+                    <span>Account Settings</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 opacity-50" />
+                </button>
+
+                {onSwitchToHostDashboard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      onSwitchToHostDashboard();
+                    }}
+                    className="w-full p-3 rounded-xl bg-[#18C5B7]/15 hover:bg-[#18C5B7]/25 text-[#123C3A] dark:text-[#18C5B7] border border-[#18C5B7]/30 flex items-center justify-between text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <LayoutDashboard className="w-4 h-4 text-[#18C5B7]" />
+                      <span>Switch to Host Portal</span>
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-between text-xs font-bold transition-colors cursor-pointer mt-2"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <LogOut className="w-4 h-4" />
+                      <span>Log Out of Go Charge</span>
+                    </span>
+                  </button>
+                )}
+              </div>
             </motion.div>
           </div>
         )}

@@ -91,13 +91,16 @@ export const BookStationModal: React.FC<BookStationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[2300] flex items-center justify-center p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[2300] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="relative w-full max-w-md bg-[#FAF8F3] dark:bg-[#0D2422] rounded-2xl border border-[#D9DED5] dark:border-[#1E4844] shadow-2xl p-5 sm:p-6 text-[#14201F] dark:text-[#E4EFEA] space-y-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="relative w-full max-w-md bg-[#FAF8F3] dark:bg-[#0D2422] rounded-t-3xl sm:rounded-2xl border-t sm:border border-[#D9DED5] dark:border-[#1E4844] shadow-2xl p-5 sm:p-6 text-[#14201F] dark:text-[#E4EFEA] space-y-4 max-h-[92dvh] overflow-y-auto pb-safe"
       >
+        {/* Mobile handle indicator */}
+        <div className="w-12 h-1.5 rounded-full bg-[#D9DED5] dark:bg-[#1E4844] mx-auto mb-1 sm:hidden shrink-0" />
+
         <div className="flex items-center justify-between pb-3 border-b border-[#D9DED5] dark:border-[#1E4844]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#19C7B1]/15 text-[#19C7B1] flex items-center justify-center">

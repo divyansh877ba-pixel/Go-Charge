@@ -26,12 +26,12 @@ export const RoleGuardModal: React.FC<RoleGuardModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="bg-white dark:bg-[#0E2725] rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-[#D9DED5] dark:border-[#1E4844] relative"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-white dark:bg-[#0E2725] rounded-t-3xl sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border-t sm:border border-[#D9DED5] dark:border-[#1E4844] relative pb-safe max-h-[92dvh] overflow-y-auto"
         >
           {/* Close button */}
           <button

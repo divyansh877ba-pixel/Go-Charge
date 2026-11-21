@@ -55,13 +55,18 @@ export const EditChargerModal: React.FC<EditChargerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm">
       <div 
-        className="relative w-full max-w-lg bg-white dark:bg-[#0D2422] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-[#183E3A] my-8 animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-lg bg-white dark:bg-[#0D2422] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border-t sm:border border-gray-100 dark:border-[#183E3A] flex flex-col max-h-[92dvh] sm:max-h-[85vh] pb-safe sm:pb-0 animate-in fade-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
-        <div className="px-6 py-5 bg-[#123C3A] text-white flex items-center justify-between">
+        {/* Mobile Swipe Handle Indicator */}
+        <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-[#183E3A]" />
+        </div>
+
+        <div className="px-5 sm:px-6 py-4 bg-[#123C3A] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#19C7B1]/20 flex items-center justify-center text-[#19C7B1]">
               <Zap className="w-4 h-4" />
@@ -80,7 +85,7 @@ export const EditChargerModal: React.FC<EditChargerModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto">
           {/* Charger Name */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-[#CBDCD6] mb-1.5">

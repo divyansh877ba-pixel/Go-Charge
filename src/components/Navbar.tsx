@@ -51,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
@@ -101,23 +102,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-[1100] w-full transition-all duration-300 ease-in-out ${
+      className={`fixed top-0 left-0 right-0 z-[1100] w-full max-w-full overflow-x-clip transition-all duration-300 ease-in-out pl-safe pr-safe pt-safe ${
         isScrolled
           ? 'bg-[#F4F1E8]/95 dark:bg-[#071715]/95 backdrop-blur-xl border-b border-[#D9DED5] dark:border-[#163835] shadow-card-subtle py-2 sm:py-2.5'
-          : 'bg-[#F4F1E8]/90 dark:bg-[#071715]/90 backdrop-blur-md border-b border-[#D9DED5]/80 dark:border-[#163835]/80 py-2.5 sm:py-3'
+          : 'bg-[#F4F1E8]/90 dark:bg-[#071715]/90 backdrop-blur-md border-b border-[#D9DED5]/80 dark:border-[#163835]/80 py-2 sm:py-3'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 flex items-center justify-between gap-1.5 sm:gap-4">
         
-        {/* Left: Brand Logo & Navigation */}
+        {/* Left: Brand Logo & Desktop Navigation */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-5 shrink-0">
           <button
             type="button"
             onClick={() => handleNavClick('home')}
-            className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] hover:border-[#18C5B7] transition-all duration-200 shadow-sm group cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] hover:border-[#18C5B7] transition-all duration-200 shadow-sm group cursor-pointer"
           >
             {/* ── Go Charge SVG Logo Mark — G integrated with lightning bolt ── */}
-            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 group-hover:scale-105 transition-transform duration-300">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 shrink-0 group-hover:scale-105 transition-transform duration-300">
               <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Go Charge logo" className="w-full h-full">
                 <defs>
                   <linearGradient id="gc-grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
@@ -147,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </svg>
             </div>
             <div className="text-left">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#123C3A] dark:text-white group-hover:text-[#18C5B7] transition-colors leading-none block">
+              <span className="font-extrabold text-xs sm:text-base tracking-tight text-[#123C3A] dark:text-white group-hover:text-[#18C5B7] transition-colors leading-none block">
                 Go Charge
               </span>
               <span className="text-[9px] font-bold text-[#18C5B7] tracking-wider uppercase hidden sm:block">
@@ -156,8 +157,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </button>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center bg-[#E9EFE7]/80 dark:bg-[#0D2422]/80 backdrop-blur-md border border-[#D9DED5] dark:border-[#1E4844] rounded-pill p-1 shadow-sm text-xs font-bold">
+          {/* Desktop Navigation Links (>= md) */}
+          <nav className="hidden md:flex items-center bg-[#E9EFE7]/80 dark:bg-[#0D2422]/80 backdrop-blur-md border border-[#D9DED5] dark:border-[#1E4844] rounded-pill p-1 shadow-sm text-xs font-bold">
             <button
               type="button"
               onClick={() => handleNavClick('map')}
@@ -220,8 +221,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
         </div>
 
-        {/* Center: Search Bar */}
-        <div className="flex-1 max-w-xs sm:max-w-md mx-1 sm:mx-3">
+        {/* Center: Search Bar (Desktop only: >= md) */}
+        <div className="hidden md:flex flex-1 max-w-xs lg:max-w-md mx-2 sm:mx-3">
           <div className={`relative flex items-center w-full transition-all duration-200 rounded-pill ${
             isSearchFocused ? 'shadow-glow-teal-sm ring-2 ring-[#18C5B7]/30' : 'hover:shadow-card-subtle'
           }`}>
@@ -273,92 +274,169 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Right Action Controls: THEME TOGGLE + ACTIONS + AUTH */}
+        {/* Right Action Controls */}
         <div className="flex items-center gap-1.5 sm:gap-2">
 
-          {/* 1. Language Toggle (EN / HI) */}
+          {/* Mobile Search Toggle Button (< md) */}
+          <button
+            type="button"
+            onClick={() => {
+              setMobileSearchOpen(!mobileSearchOpen);
+              if (mobileMenuOpen) setMobileMenuOpen(false);
+            }}
+            title={mobileSearchOpen ? "Close search" : "Search stations"}
+            aria-label="Toggle mobile search"
+            className={`md:hidden p-2 rounded-btn border transition-all cursor-pointer ${
+              mobileSearchOpen || searchQuery
+                ? 'bg-[#18C5B7]/15 border-[#18C5B7] text-[#18C5B7]'
+                : 'bg-[#E9EFE7] dark:bg-[#0D2422] border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white'
+            }`}
+          >
+            <Search className="w-4 h-4 text-[#18C5B7]" />
+          </button>
+
+          {/* Language Toggle (EN / HI) - Always visible and clear */}
           {onToggleLang && (
             <button
               type="button"
               onClick={onToggleLang}
               title={lang === 'en' ? 'हिंदी में बदलें' : 'Switch to English'}
-              className="px-2 sm:px-2.5 py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] text-[11px] font-bold text-[#123C3A] dark:text-white transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+              className="px-2 sm:px-2.5 py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] text-[11px] font-bold text-[#123C3A] dark:text-white transition-all cursor-pointer flex items-center gap-1 shadow-sm shrink-0"
             >
               <Globe className="w-3 h-3 text-[#18C5B7]" />
               <span>{lang === 'en' ? 'हिंदी' : 'EN'}</span>
             </button>
           )}
 
-          {/* Quick Filter button (drawer trigger) */}
+          {/* Desktop Filter button (>= md) */}
           <button
             type="button"
             onClick={onOpenFilterModal}
             title="Filters (Shortcut: F)"
-            className="p-2 sm:px-2.5 sm:py-2 rounded-btn bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            className="hidden md:flex p-2 sm:px-2.5 sm:py-2 rounded-btn bg-[#E9EFE7] dark:bg-[#0D2422] hover:bg-white dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white transition-all shadow-sm items-center gap-1.5 cursor-pointer"
           >
             <SlidersHorizontal className="w-4 h-4 text-[#18C5B7]" />
             <span className="hidden xl:inline text-xs font-bold">{t.filters}</span>
           </button>
 
-          {/* 4. Login / User Menu Button */}
-          {user ? (
-            <div className="flex items-center gap-1">
+          {/* Desktop Login / User Menu Button (>= md) */}
+          <div className="hidden md:flex items-center gap-1">
+            {user ? (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleAuthButtonClick}
+                  className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-pill bg-white dark:bg-[#0D2422] hover:bg-[#E9EFE7] dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] shadow-sm transition-all cursor-pointer"
+                  title={`Open ${isOwner ? 'Owner Dashboard' : 'Consumer Dashboard'}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7] font-bold text-xs">
+                    {user.name.charAt(0)}
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <span className="text-xs font-bold text-[#123C3A] dark:text-white block leading-none truncate max-w-[80px]">
+                      {user.name.split(' ')[0]}
+                    </span>
+                    <span className="text-[9px] font-extrabold uppercase tracking-wider block text-[#18C5B7]">
+                      {isOwner ? 'Host' : 'Consumer'}
+                    </span>
+                  </div>
+                </button>
+
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    title="Log Out"
+                    className="p-2 rounded-full hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ) : (
               <button
                 type="button"
                 onClick={handleAuthButtonClick}
-                className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-pill bg-white dark:bg-[#0D2422] hover:bg-[#E9EFE7] dark:hover:bg-[#123633] border border-[#D9DED5] dark:border-[#1E4844] shadow-sm transition-all cursor-pointer"
-                title={`Open ${isOwner ? 'Owner Dashboard' : 'Consumer Dashboard'}`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-btn bg-[#18C5B7] hover:bg-[#15A896] text-white text-xs font-extrabold shadow-glow-teal-sm transition-all cursor-pointer"
               >
-                <div className="w-6 h-6 rounded-full bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7] font-bold text-xs">
-                  {user.name.charAt(0)}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <span className="text-xs font-bold text-[#123C3A] dark:text-white block leading-none truncate max-w-[80px]">
-                    {user.name.split(' ')[0]}
-                  </span>
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider block text-[#18C5B7]">
-                    {isOwner ? 'Host' : 'Consumer'}
-                  </span>
-                </div>
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{t.login}</span>
               </button>
+            )}
+          </div>
 
-              {onLogout && (
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  title="Log Out"
-                  className="p-2 rounded-full hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleAuthButtonClick}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-btn bg-[#18C5B7] hover:bg-[#15A896] text-white text-xs font-extrabold shadow-glow-teal-sm transition-all cursor-pointer"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>{t.login}</span>
-            </button>
-          )}
-
-          {/* 5. Mobile Menu Toggle */}
+          {/* Hamburger Menu Toggle (< md) */}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() => {
+              setMobileMenuOpen(!mobileMenuOpen);
+              if (mobileSearchOpen) setMobileSearchOpen(false);
+            }}
             aria-label="Toggle mobile menu"
-            className="lg:hidden p-2 rounded-btn bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white transition-colors cursor-pointer"
+            className="md:hidden p-2 rounded-btn bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-[#123C3A] dark:text-white transition-colors cursor-pointer shrink-0"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
 
         </div>
 
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Dedicated Mobile Search Row (Smooth Expandable Drawer) */}
+      <AnimatePresence>
+        {mobileSearchOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="md:hidden px-3 pt-1.5 pb-2.5 bg-[#F4F1E8]/98 dark:bg-[#071715]/98 border-t border-[#D9DED5]/70 dark:border-[#163835]/70 shadow-inner"
+          >
+            <div className="relative flex items-center w-full">
+              <Search className="w-4 h-4 text-[#18C5B7] absolute left-3 pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  if (activeView !== 'map' && e.target.value.trim().length > 0) {
+                    setActiveView('map');
+                  }
+                }}
+                placeholder={t.searchPlaceholder}
+                className="w-full pl-9 pr-16 py-2 rounded-pill bg-white dark:bg-[#0D2422] text-[#14201F] dark:text-[#E4EFEA] placeholder-[#7A8C89] dark:placeholder-[#648782] text-xs border border-[#18C5B7] focus:ring-2 focus:ring-[#18C5B7]/30 outline-none shadow-sm transition-all"
+                autoFocus
+              />
+              <div className="absolute right-2 flex items-center gap-1">
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    className="p-1 rounded-full text-[#7A8C89] hover:text-[#123C3A] dark:hover:text-white cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeView !== 'map') setActiveView('map');
+                    onLocateUser();
+                    setMobileSearchOpen(false);
+                  }}
+                  title={t.useMyLocation}
+                  className="p-1 rounded-full text-[#18C5B7] hover:bg-[#E9EFE7] dark:hover:bg-[#123633] cursor-pointer"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Drawer Menu (< md) */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -366,9 +444,86 @@ export const Navbar: React.FC<NavbarProps> = ({
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="lg:hidden border-t border-[#D9DED5] dark:border-[#1E4844] bg-[#F4F1E8]/98 dark:bg-[#071715]/98 backdrop-blur-2xl px-5 py-4 space-y-3 shadow-2xl"
+            className="md:hidden border-t border-[#D9DED5] dark:border-[#1E4844] bg-[#F4F1E8]/98 dark:bg-[#071715]/98 backdrop-blur-2xl px-4 py-4 space-y-3.5 shadow-2xl max-h-[calc(100dvh-60px)] overflow-y-auto"
           >
-            <div className="flex flex-col gap-2">
+            {/* Primary Action at Top of Mobile Drawer: Auth / Profile */}
+            {user ? (
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7] font-extrabold text-sm border border-[#18C5B7]/40">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-[#123C3A] dark:text-white block leading-tight">
+                        {user.name}
+                      </span>
+                      <span className="text-[10px] uppercase font-extrabold tracking-wider text-[#18C5B7]">
+                        {isOwner ? 'Host Account' : 'EV Consumer'}
+                      </span>
+                    </div>
+                  </div>
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onLogout();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-500/20 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Log Out</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#D9DED5]/60 dark:border-[#1E4844]/60">
+                  <button
+                    type="button"
+                    onClick={() => handleNavClick('consumer-dashboard')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                      activeView === 'consumer-dashboard'
+                        ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                        : 'bg-[#E9EFE7] dark:bg-[#081B19] text-[#123C3A] dark:text-white hover:bg-[#D9DED5]'
+                    }`}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    <span>My Dashboard</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavClick('owner-dashboard')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                      activeView === 'owner-dashboard'
+                        ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
+                        : 'bg-[#E9EFE7] dark:bg-[#081B19] text-[#123C3A] dark:text-white hover:bg-[#D9DED5]'
+                    }`}
+                  >
+                    <Shield className="w-3.5 h-3.5 text-[#18C5B7]" />
+                    <span>Host Portal</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleAuthButtonClick();
+                }}
+                className="w-full px-4 py-3 rounded-2xl font-extrabold text-xs flex items-center justify-between bg-[#18C5B7] hover:bg-[#15A896] text-white shadow-glow-teal transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <LogIn className="w-4 h-4" />
+                  <span>{t.login} / Sign Up</span>
+                </div>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Navigation Links */}
+            <div className="flex flex-col gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => handleNavClick('map')}
@@ -378,7 +533,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'bg-[#E9EFE7] dark:bg-[#0D2422] text-[#123C3A] dark:text-white'
                 }`}
               >
-                <span>{t.findChargers} (Live Map)</span>
+                <span className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#18C5B7]" />
+                  <span>{t.findChargers} (Live Map)</span>
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -404,24 +562,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              {isConsumer && (
-                <button
-                  type="button"
-                  onClick={() => handleNavClick('consumer-dashboard')}
-                  className={`w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                    activeView === 'consumer-dashboard'
-                      ? 'bg-[#18C5B7] text-white shadow-glow-teal-sm'
-                      : 'bg-[#E9EFE7] dark:bg-[#0D2422] text-[#123C3A] dark:text-white'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>My Consumer Dashboard</span>
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={() => handleNavClick('owner-dashboard')}
@@ -431,49 +571,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'bg-[#E9EFE7] dark:bg-[#0D2422] text-[#123C3A] dark:text-white'
                 }`}
               >
-                <span>{t.hostPortal}</span>
+                <span className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#18C5B7]" />
+                  <span>{t.hostPortal}</span>
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              {user ? (
-                <div className="pt-2 border-t border-[#D9DED5] dark:border-[#1E4844] flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-[#18C5B7]/20 flex items-center justify-center text-[#18C5B7] font-bold text-xs">
-                      {user.name.charAt(0)}
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-[#123C3A] dark:text-white block">{user.name}</span>
-                      <span className="text-[10px] uppercase font-bold text-[#18C5B7]">
-                        {isOwner ? 'Host' : 'Consumer'}
-                      </span>
-                    </div>
-                  </div>
-                  {onLogout && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        onLogout();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 text-xs font-bold"
-                    >
-                      Log Out
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleAuthButtonClick();
-                  }}
-                  className="w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between bg-[#18C5B7] text-white shadow-glow-teal-sm transition-colors cursor-pointer"
-                >
-                  <span>{t.login}</span>
-                  <LogIn className="w-4 h-4" />
-                </button>
-              )}
+              {/* Quick Filters Shortcut from Mobile Menu */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenFilterModal();
+                }}
+                className="w-full px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between bg-[#E9EFE7] dark:bg-[#0D2422] text-[#123C3A] dark:text-white transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-[#18C5B7]" />
+                  <span>Smart Charger Filters</span>
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
         )}

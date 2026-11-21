@@ -793,12 +793,12 @@ export function App() {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="flex flex-col h-screen w-screen overflow-hidden"
+            className="flex flex-col h-[100dvh] w-full overflow-hidden"
           >
             {/* Main Layout Container */}
-            <div className="flex-1 flex flex-col md:flex-row pt-[70px] h-[calc(100vh-70px)] overflow-hidden relative">
+            <div className="flex-1 flex flex-col md:flex-row pt-[56px] sm:pt-[70px] h-[calc(100dvh-56px)] sm:h-[calc(100dvh-70px)] overflow-hidden relative">
               
-              {/* 65% Map Section */}
+              {/* Map Section */}
               <div className="relative w-full md:w-[65%] h-full">
                 <ChargingMap
                   stations={filteredStations}
@@ -812,7 +812,7 @@ export function App() {
                 {selectedStation && (
                   <button
                     onClick={() => setDirectionsStation(selectedStation)}
-                    className="md:hidden fixed bottom-28 right-5 z-40 px-4 py-3 rounded-pill bg-[#19C7B1] hover:bg-[#123C3A] text-white font-bold text-xs shadow-glow-teal flex items-center gap-2 active:scale-95 transition-all"
+                    className="md:hidden fixed bottom-52 right-4 z-40 px-3.5 py-2.5 rounded-pill bg-[#19C7B1] hover:bg-[#123C3A] text-white font-bold text-xs shadow-glow-teal flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                   >
                     <Navigation className="w-4 h-4 fill-white" />
                     <span>Navigate ({calculateDistance(USER_CURRENT_LOCATION.lat, USER_CURRENT_LOCATION.lng, selectedStation.lat, selectedStation.lng)} km)</span>

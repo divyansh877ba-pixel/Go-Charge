@@ -29,14 +29,19 @@ export const ChargerDetailsModal: React.FC<ChargerDetailsModalProps> = ({
     : ['https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=800&q=80'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm">
       <div 
-        className="relative w-full max-w-2xl bg-white dark:bg-[#0D2422] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-[#183E3A] my-8 animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl bg-white dark:bg-[#0D2422] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border-t sm:border border-gray-100 dark:border-[#183E3A] flex flex-col max-h-[92dvh] sm:max-h-[88vh] pb-safe sm:pb-0 animate-in fade-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
+        {/* Mobile Swipe Handle Indicator */}
+        <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center bg-gray-900 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/30" />
+        </div>
+
         {/* Header Bar */}
-        <div className="relative h-48 sm:h-64 bg-gray-900">
+        <div className="relative h-40 sm:h-56 bg-gray-900 shrink-0">
           <img
             src={images[activeImageIndex] || images[0]}
             alt={charger.name}
@@ -105,7 +110,7 @@ export const ChargerDetailsModal: React.FC<ChargerDetailsModalProps> = ({
         )}
 
         {/* Content Body */}
-        <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto">
           {/* Description */}
           <div>
             <h4 className="text-xs font-semibold text-gray-400 dark:text-[#7A9E99] uppercase tracking-wider">Host Description</h4>

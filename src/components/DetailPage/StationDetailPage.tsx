@@ -500,18 +500,18 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
         transition={{ duration: 0.28, delay: 0.1 }}
         className="fixed bottom-0 left-0 right-0 z-40 bg-[#F4F1E8]/95 dark:bg-[#071715]/95 backdrop-blur-xl border-t border-[#D9DED5] dark:border-[#183E3A] px-4 sm:px-8 py-3.5 pb-safe shadow-card-hover"
       >
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex flex-col">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2.5 sm:gap-4">
+          <div className="flex flex-col min-w-0 shrink">
             <div className="flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-black text-[#123C3A] dark:text-[#E4EFEA] tabular-nums">₹{station.pricePerKwh}</span>
+              <span className="text-lg sm:text-2xl font-black text-[#123C3A] dark:text-[#E4EFEA] tabular-nums">₹{station.pricePerKwh}</span>
               <span className="text-xs text-[#5E716E] dark:text-[#8FAFA9] font-medium">/ kWh</span>
             </div>
-            <span className="text-[11px] text-[#5E716E] dark:text-[#8FAFA9] tabular-nums">
+            <span className="text-[10px] sm:text-[11px] text-[#5E716E] dark:text-[#8FAFA9] tabular-nums truncate">
               Min fee ₹{station.minSessionFee} · ~₹{station.estimatedFullChargeCost} for 80%
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={() => setIsContactHostOpen(true)}
               className="hidden sm:flex min-h-[44px] items-center gap-1.5 px-3.5 py-2.5 rounded-btn bg-white dark:bg-[#0D2422] hover:bg-[#E9EFE7] dark:hover:bg-[#163834] border border-[#D9DED5] dark:border-[#183E3A] text-xs font-bold text-[#123C3A] dark:text-[#E4EFEA] transition-colors shadow-sm cursor-pointer"
@@ -522,16 +522,17 @@ export const StationDetailPage: React.FC<StationDetailPageProps> = ({
 
             <button
               onClick={() => setIsBookModalOpen(true)}
-              className="min-h-[44px] px-4 sm:px-6 py-2.5 rounded-btn bg-white dark:bg-[#0D2422] hover:bg-[#E9EFE7] dark:hover:bg-[#163834] border border-[#19C7B1] text-xs font-bold text-[#123C3A] dark:text-[#19C7B1] transition-colors shadow-sm cursor-pointer"
+              className="min-h-[42px] sm:min-h-[44px] px-2.5 sm:px-6 py-2 sm:py-2.5 rounded-btn bg-white dark:bg-[#0D2422] hover:bg-[#E9EFE7] dark:hover:bg-[#163834] border border-[#19C7B1] text-xs font-bold text-[#123C3A] dark:text-[#19C7B1] transition-colors shadow-sm cursor-pointer whitespace-nowrap"
             >
-              <span>Book Bay (Demo)</span>
+              <span className="hidden xs:inline">Book Bay (Demo)</span>
+              <span className="xs:hidden">Book Bay</span>
             </button>
 
             <button
               onClick={() => onStartCharging(station, firstAvailableConnector)}
-              className="min-h-[44px] px-6 sm:px-8 py-3 rounded-btn bg-[#19C7B1] hover:bg-[#123C3A] text-white font-bold text-sm flex items-center gap-2 transition-all duration-300 shadow-glow-teal active:scale-95 cursor-pointer"
+              className="min-h-[42px] sm:min-h-[44px] px-3.5 sm:px-8 py-2 sm:py-3 rounded-btn bg-[#19C7B1] hover:bg-[#123C3A] text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all duration-300 shadow-glow-teal active:scale-95 cursor-pointer whitespace-nowrap"
             >
-              <Zap className="w-4 h-4 fill-current" />
+              <Zap className="w-4 h-4 fill-current shrink-0" />
               <span>Start Charging</span>
             </button>
           </div>

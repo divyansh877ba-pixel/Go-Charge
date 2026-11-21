@@ -64,24 +64,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         ref={heroRef}
         onMouseMove={handleHeroMouseMove}
         onMouseLeave={handleHeroMouseLeave}
-        className="relative pt-8 sm:pt-12 lg:pt-16 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-[#F4F1E8] dark:bg-[#071715] transition-colors"
+        className="relative pt-4 sm:pt-10 lg:pt-14 pb-12 sm:pb-20 px-3 sm:px-6 lg:px-8 overflow-hidden bg-[#F4F1E8] dark:bg-[#071715] transition-colors"
       >
         {/* Subtle Ambient Backlight Glow behind Hero */}
         <div className="absolute top-1/3 left-1/2 w-[600px] h-[350px] bg-[#19C7B1]/15 dark:bg-[#19C7B1]/10 rounded-full blur-[140px] pointer-events-none ambient-glow-breathe" />
 
         <div className="relative max-w-7xl mx-auto z-10">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
             
             {/* Left Column: Headline, Supporting Text, and Vehicle Search Widget */}
-            <div className="lg:col-span-7 text-center lg:text-left space-y-5">
+            <div className="lg:col-span-7 text-center lg:text-left space-y-3.5 sm:space-y-5">
               
               {/* Top Tag Pill */}
               <motion.div 
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-xs font-bold text-[#123C3A] dark:text-[#E4EFEA] shadow-card-subtle"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:py-1.5 rounded-pill bg-[#E9EFE7] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] text-[11px] sm:text-xs font-bold text-[#123C3A] dark:text-[#E4EFEA] shadow-card-subtle"
               >
                 <span className="w-2 h-2 rounded-full bg-[#19C7B1] animate-ping" />
                 <span className="text-[#19C7B1]">Go Charge Community Network</span>
@@ -93,7 +93,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, delay: 0.1, ease: "easeOut" }}
-                className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-[#123C3A] dark:text-white"
+                className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] sm:leading-[1.08] text-[#123C3A] dark:text-white"
               >
                 {t.heroHeadline}
               </motion.h1>
@@ -103,7 +103,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, delay: 0.2, ease: "easeOut" }}
-                className="max-w-2xl mx-auto lg:mx-0 text-base sm:text-lg text-[#5E716E] dark:text-[#8FAFA9] leading-relaxed font-medium"
+                className="max-w-2xl mx-auto lg:mx-0 text-xs sm:text-base lg:text-lg text-[#5E716E] dark:text-[#8FAFA9] leading-relaxed font-medium"
               >
                 {t.heroSubtext}
               </motion.p>
@@ -113,7 +113,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, delay: 0.3, ease: "easeOut" }}
-                className="pt-2"
+                className="pt-1 sm:pt-2"
               >
                 <VehicleHeroWidget
                   onSearch={onSearchWithVehicle}

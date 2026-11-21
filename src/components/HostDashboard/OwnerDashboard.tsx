@@ -81,6 +81,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const [detailsCharger, setDetailsCharger] = useState<HostCharger | null>(null);
   const [editingCharger, setEditingCharger] = useState<HostCharger | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   // Theme Hook (Persistent Light / Dark Mode)
   const { isDark, toggleTheme } = useTheme();
@@ -315,7 +316,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               className="fixed inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setMobileSidebarOpen(false)}
             />
-            <div className="relative w-72 bg-[#073B35] text-white p-5 flex flex-col justify-between h-full z-10 shadow-2xl">
+            <div className="relative w-72 bg-[#073B35] text-white p-5 flex flex-col justify-between h-full z-10 shadow-2xl overflow-y-auto max-h-[100dvh] pb-safe">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -559,7 +560,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </header>
 
           {/* Main Body View Container */}
-          <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+          <main className="flex-1 p-3.5 sm:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -640,6 +641,282 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         </div>
 
       </div>
+
+      {/* Host Mobile Bottom Navigation (Overview, Chargers, Bookings, Earnings, More) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#073B35]/95 dark:bg-[#071715]/95 backdrop-blur-xl border-t border-white/10 dark:border-[#163835] px-2 py-1 pb-safe flex items-center justify-around shadow-2xl text-[#E0EFEA]">
+        {/* Overview */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('overview');
+            setMobileMoreOpen(false);
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'overview' && !mobileMoreOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#87B8B1] hover:text-white'
+          }`}
+        >
+          <LayoutDashboard className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">Overview</span>
+        </button>
+
+        {/* Chargers */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('chargers');
+            setMobileMoreOpen(false);
+          }}
+          className={`flex-1 relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'chargers' && !mobileMoreOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#87B8B1] hover:text-white'
+          }`}
+        >
+          <div className="relative">
+            <BatteryCharging className="w-5 h-5 mb-0.5" />
+            {chargers.length > 0 && (
+              <span className="absolute -top-1 -right-2 w-3.5 h-3.5 rounded-full bg-[#18C5B7] text-[#073B35] text-[9px] font-extrabold flex items-center justify-center">
+                {chargers.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px]">Chargers</span>
+        </button>
+
+        {/* Bookings */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('bookings');
+            setMobileMoreOpen(false);
+          }}
+          className={`flex-1 relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'bookings' && !mobileMoreOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#87B8B1] hover:text-white'
+          }`}
+        >
+          <div className="relative">
+            <CalendarCheck className="w-5 h-5 mb-0.5" />
+            {bookings.filter(b => b.status === 'upcoming').length > 0 && (
+              <span className="absolute -top-1 -right-2 w-3.5 h-3.5 rounded-full bg-[#18C5B7] text-[#073B35] text-[9px] font-extrabold flex items-center justify-center">
+                {bookings.filter(b => b.status === 'upcoming').length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px]">Bookings</span>
+        </button>
+
+        {/* Earnings */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('earnings');
+            setMobileMoreOpen(false);
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            activeTab === 'earnings' && !mobileMoreOpen
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#87B8B1] hover:text-white'
+          }`}
+        >
+          <TrendingUp className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">Earnings</span>
+        </button>
+
+        {/* More */}
+        <button
+          type="button"
+          onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors cursor-pointer ${
+            mobileMoreOpen || activeTab === 'analytics' || activeTab === 'reviews' || activeTab === 'profile' || activeTab === 'settings'
+              ? 'text-[#18C5B7] font-extrabold'
+              : 'text-[#87B8B1] hover:text-white'
+          }`}
+        >
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">More</span>
+        </button>
+      </nav>
+
+      {/* Host "More" Mobile Bottom Sheet */}
+      <AnimatePresence>
+        {mobileMoreOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden flex items-end">
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileMoreOpen(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="relative w-full bg-[#073B35] text-white rounded-t-3xl border-t border-white/10 shadow-2xl p-5 pb-safe z-10 max-h-[82dvh] overflow-y-auto"
+            >
+              <div className="w-12 h-1.5 rounded-full bg-white/20 mx-auto mb-4" />
+
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div>
+                  <h3 className="font-extrabold text-sm text-white">Host Operations</h3>
+                  <p className="text-[11px] text-[#A3CCC7]">{profile.name} (Host ID #4492)</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMoreOpen(false)}
+                  className="p-1 rounded-lg text-white/60 hover:text-white cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="py-3 space-y-1.5">
+                {/* Add Charger (Authorized Hosts Only) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMoreOpen(false);
+                    setIsAddModalOpen(true);
+                  }}
+                  className="w-full p-3 rounded-xl bg-[#18C5B7] hover:bg-[#15b2a5] text-[#073B35] flex items-center justify-between text-xs font-black shadow-lg transition-all cursor-pointer"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <PlusCircle className="w-4 h-4" />
+                    <span>List New Charger</span>
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-[#073B35]/20">Host Only</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('analytics');
+                    setMobileMoreOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'analytics'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/5 hover:bg-white/10 text-[#E0EFEA]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <BarChart3 className="w-4 h-4 text-[#18C5B7]" />
+                    <span>Analytics & Telemetry</span>
+                  </span>
+                  <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('reviews');
+                    setMobileMoreOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'reviews'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/5 hover:bg-white/10 text-[#E0EFEA]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Star className="w-4 h-4 text-[#F59E0B]" />
+                    <span>Driver Reviews</span>
+                  </span>
+                  <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('profile');
+                    setMobileMoreOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'profile'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/5 hover:bg-white/10 text-[#E0EFEA]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <User className="w-4 h-4 text-[#18C5B7]" />
+                    <span>Host Profile</span>
+                  </span>
+                  <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setMobileMoreOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-xl flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+                    activeTab === 'settings'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/5 hover:bg-white/10 text-[#E0EFEA]'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Settings className="w-4 h-4 text-[#18C5B7]" />
+                    <span>Host Settings</span>
+                  </span>
+                  <ChevronDown className="w-4 h-4 -rotate-90 opacity-50" />
+                </button>
+
+                <div className="pt-2 border-t border-white/10 space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMoreOpen(false);
+                      onReturnToMap();
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white flex items-center justify-between text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <ArrowLeft className="w-4 h-4 text-[#18C5B7]" />
+                      <span>Back to Driver Map</span>
+                    </span>
+                  </button>
+
+                  {onGoToConsumerDashboard && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMoreOpen(false);
+                        onGoToConsumerDashboard();
+                      }}
+                      className="w-full p-2.5 rounded-xl bg-[#18C5B7]/15 hover:bg-[#18C5B7]/25 text-white border border-[#18C5B7]/30 flex items-center justify-between text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <LayoutDashboard className="w-4 h-4 text-[#18C5B7]" />
+                        <span>Consumer Dashboard</span>
+                      </span>
+                    </button>
+                  )}
+
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMoreOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full p-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-200 border border-red-500/20 flex items-center justify-between text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <LogOut className="w-4 h-4 text-red-400" />
+                        <span>Log Out of Host Account</span>
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 5-Step Charger Registration Wizard Modal */}
       <ChargerRegistrationModal

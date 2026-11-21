@@ -42,11 +42,16 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-[2200] flex items-center justify-center p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-lg p-5 sm:p-6 rounded-2xl bg-[#FAF8F3] dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#1E4844] shadow-2xl text-[#14201F] dark:text-[#E4EFEA] space-y-4 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[2200] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
+      <div className="relative w-full max-w-lg p-4 sm:p-6 rounded-t-3xl sm:rounded-2xl bg-[#FAF8F3] dark:bg-[#0D2422] border-t sm:border border-[#D9DED5] dark:border-[#1E4844] shadow-2xl text-[#14201F] dark:text-[#E4EFEA] space-y-3 sm:space-y-4 max-h-[92dvh] sm:max-h-[90vh] flex flex-col pb-safe sm:pb-6">
         
+        {/* Mobile Swipe Handle Indicator */}
+        <div className="sm:hidden w-full pt-1 pb-1 flex justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-[#B8C2B3] dark:bg-[#1E4844]" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#D9DED5] dark:border-[#1E4844]">
+        <div className="flex items-center justify-between pb-3 border-b border-[#D9DED5] dark:border-[#1E4844] shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#19C7B1]/15 text-[#19C7B1] flex items-center justify-center">
               <SlidersHorizontal className="w-4 h-4" />

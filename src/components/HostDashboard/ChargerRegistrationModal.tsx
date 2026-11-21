@@ -191,20 +191,25 @@ export const ChargerRegistrationModal: React.FC<ChargerRegistrationModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-5 bg-[#123C3A]/65 dark:bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-[#0D2422] rounded-card border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl overflow-hidden my-auto text-[#14201F] dark:text-[#E4EFEA]">
+    <div className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-5 bg-[#123C3A]/65 dark:bg-black/80 backdrop-blur-md">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-[#0D2422] rounded-t-3xl sm:rounded-card border-t sm:border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] pb-safe sm:pb-0 text-[#14201F] dark:text-[#E4EFEA]">
         
+        {/* Mobile Swipe / Drag Handle Indicator */}
+        <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-[#B8C2B3] dark:bg-[#183E3A]" />
+        </div>
+
         {/* Modal Header */}
-        <div className="px-5 sm:px-6 py-4 bg-[#E9EFE7] dark:bg-[#081B19] border-b border-[#D9DED5] dark:border-[#183E3A] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#19C7B1]/20 text-[#19C7B1] flex items-center justify-center border border-[#19C7B1]/40 shadow-glow-teal-sm">
-              <Zap className="w-5 h-5 fill-current" />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#E9EFE7] dark:bg-[#081B19] border-b border-[#D9DED5] dark:border-[#183E3A] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#19C7B1]/20 text-[#19C7B1] flex items-center justify-center border border-[#19C7B1]/40 shadow-glow-teal-sm shrink-0">
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-[#123C3A] dark:text-[#E4EFEA]">
+              <h2 className="text-sm sm:text-base font-extrabold text-[#123C3A] dark:text-[#E4EFEA] leading-tight">
                 List Your Charger on Go Charge
               </h2>
-              <p className="text-xs text-[#5E716E] dark:text-[#8FAFA9]">
+              <p className="text-[11px] sm:text-xs text-[#5E716E] dark:text-[#8FAFA9]">
                 Step {currentStep} of 5 · Guided Community Onboarding
               </p>
             </div>
@@ -213,7 +218,7 @@ export const ChargerRegistrationModal: React.FC<ChargerRegistrationModalProps> =
           <button
             type="button"
             onClick={onClose}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white hover:bg-white/80 dark:hover:bg-[#123431] transition-colors cursor-pointer"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white hover:bg-white/80 dark:hover:bg-[#123431] transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -221,7 +226,7 @@ export const ChargerRegistrationModal: React.FC<ChargerRegistrationModalProps> =
         </div>
 
         {/* Multi-Step Animated Progress Bar */}
-        <div className="w-full bg-[#D9DED5] dark:bg-[#183E3A] h-1.5">
+        <div className="w-full bg-[#D9DED5] dark:bg-[#183E3A] h-1.5 shrink-0">
           <div
             className="bg-[#19C7B1] dark:bg-[#18C5B7] h-1.5 transition-all duration-300"
             style={{ width: `${(currentStep / 5) * 100}%` }}
@@ -229,7 +234,7 @@ export const ChargerRegistrationModal: React.FC<ChargerRegistrationModalProps> =
         </div>
 
         {/* Step Indicator Tabs */}
-        <div className="px-5 sm:px-6 py-2.5 bg-white dark:bg-[#081B19] border-b border-[#D9DED5] dark:border-[#183E3A] hidden sm:flex items-center justify-between text-xs font-bold text-[#5E716E] dark:text-[#8FAFA9]">
+        <div className="px-5 sm:px-6 py-2.5 bg-white dark:bg-[#081B19] border-b border-[#D9DED5] dark:border-[#183E3A] hidden sm:flex items-center justify-between text-xs font-bold text-[#5E716E] dark:text-[#8FAFA9] shrink-0">
           {[
             { num: 1, label: 'Charger Info' },
             { num: 2, label: 'Location & Map' },
@@ -265,7 +270,7 @@ export const ChargerRegistrationModal: React.FC<ChargerRegistrationModalProps> =
         </div>
 
         {/* Modal Form Body */}
-        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto space-y-5">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto space-y-4 sm:space-y-5">
           
           {/* Error Alert Pill */}
           {errorMsg && (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import { motion, PanInfo, useDragControls } from 'framer-motion';
 import { Station, SortOption } from '../../types';
 import { StationCard } from '../StationList/StationCard';
 import { ChevronUp, ChevronDown, Minimize2 } from 'lucide-react';
@@ -30,15 +30,16 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
   onToggleFavorite,
 }) => {
   const [sheetState, setSheetState] = useState<SheetState>('peek');
+  const dragControls = useDragControls();
 
   const getHeightStyle = () => {
     switch (sheetState) {
       case 'peek':
-        return 'h-[190px]';
+        return 'h-[195px] max-h-[195px]';
       case 'half':
-        return 'h-[52vh]';
+        return 'h-[52dvh] max-h-[52dvh]';
       case 'full':
-        return 'h-[88vh]';
+        return 'h-[88dvh] max-h-[88dvh]';
     }
   };
 
@@ -49,10 +50,10 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
   };
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.y < -50) {
+    if (info.offset.y < -40 || info.velocity.y < -300) {
       if (sheetState === 'peek') setSheetState('half');
       else if (sheetState === 'half') setSheetState('full');
-    } else if (info.offset.y > 50) {
+    } else if (info.offset.y > 40 || info.velocity.y > 300) {
       if (sheetState === 'full') setSheetState('half');
       else if (sheetState === 'half') setSheetState('peek');
     }
@@ -61,15 +62,19 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
   return (
     <motion.div
       drag="y"
+      dragListener={false}
+      dragControls={dragControls}
       dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={0.15}
+      dragElastic={0.12}
       onDragEnd={handleDragEnd}
       className={`fixed bottom-0 left-0 right-0 z-40 bg-[#F4F1E8]/98 dark:bg-[#071715]/98 backdrop-blur-2xl rounded-t-3xl border-t border-[#D9DED5] dark:border-[#183E3A] shadow-2xl flex flex-col transition-all duration-300 ease-out md:hidden pb-safe ${getHeightStyle()}`}
     >
-      {/* Drag Handle Bar with Accessible 44px Hit-Target Controls */}
+      {/* Drag Handle Bar with Dedicated Drag Listener: Restricting drag to handle so cards scroll normally */}
       <div 
+        onPointerDown={(e) => dragControls.start(e)}
         onClick={cycleSheetState}
-        className="w-full pt-3 pb-2 flex flex-col items-center justify-center cursor-pointer select-none"
+        style={{ touchAction: 'none' }}
+        className="w-full pt-3 pb-2 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing select-none shrink-0"
       >
         <div className="w-12 h-1.5 rounded-full bg-[#B8C2B3] dark:bg-[#183E3A] mb-1.5" />
         <div className="flex items-center justify-between w-full px-4 text-xs text-[#5E716E] dark:text-[#8FAFA9]">
@@ -91,7 +96,7 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
                 else setSheetState('half');
               }}
               aria-label={sheetState === 'peek' ? 'Expand station list' : 'Collapse station list'}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white transition-colors cursor-pointer"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center text-[#5E716E] dark:text-[#8FAFA9] hover:text-[#123C3A] dark:hover:text-white transition-colors cursor-pointer"
             >
               {sheetState === 'full' ? (
                 <Minimize2 className="w-4 h-4 text-[#5E716E] dark:text-[#8FAFA9]" />
@@ -107,9 +112,9 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
 
       {/* When in peek mode: show selected station or first station card in horizontal preview */}
       {sheetState === 'peek' ? (
-        <div className="px-4 py-1 overflow-x-auto flex gap-3 no-scrollbar">
+        <div className="px-4 py-1 overflow-x-auto flex gap-3 no-scrollbar flex-1 min-h-0">
           {(selectedStation ? [selectedStation] : stations.slice(0, 3)).map((st) => (
-            <div key={st.id} className="min-w-[290px] w-full">
+            <div key={st.id} className="min-w-[280px] w-full">
               <StationCard
                 station={st}
                 isSelected={selectedStation?.id === st.id}
@@ -124,7 +129,7 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
         </div>
       ) : (
         /* Half or Full mode: scrollable list with sort options */
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="px-4 py-2 border-b border-[#D9DED5] dark:border-[#183E3A] flex items-center justify-between shrink-0 bg-[#E9EFE7] dark:bg-[#081B19]">
             <span className="text-xs font-semibold text-[#5E716E] dark:text-[#8FAFA9]">Sorted by {sortOption}</span>
             <select
@@ -139,7 +144,7 @@ export const BottomSheetPanel: React.FC<BottomSheetPanelProps> = ({
             </select>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 overscroll-contain">
             {stations.map((st) => (
               <StationCard
                 key={st.id}

@@ -34,8 +34,10 @@ export const NavigationDirectionsModal: React.FC<NavigationDirectionsModalProps>
   ];
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-md p-6 rounded-card bg-white dark:bg-[#0D2422] border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl text-[#14201F] dark:text-[#E4EFEA] space-y-5">
+    <div className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#123C3A]/60 dark:bg-black/80 backdrop-blur-md">
+      <div className="relative w-full max-w-md p-5 sm:p-6 rounded-t-3xl sm:rounded-card bg-white dark:bg-[#0D2422] border-t sm:border border-[#D9DED5] dark:border-[#183E3A] shadow-2xl text-[#14201F] dark:text-[#E4EFEA] space-y-4 sm:space-y-5 max-h-[92dvh] overflow-y-auto pb-safe">
+        {/* Mobile handle indicator */}
+        <div className="w-12 h-1.5 rounded-full bg-[#D9DED5] dark:bg-[#183E3A] mx-auto mb-1 sm:hidden shrink-0" />
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#D9DED5] dark:border-[#183E3A]">
